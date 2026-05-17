@@ -20,7 +20,8 @@
 <body class="m-0 p-0 text-gray-900 bg-gray-50">
     <div id="root"></div>
 
-    <script type="text/babel" data-type="module">
+    <!-- 🔥 修正 1：加入 data-presets="react"，確保瀏覽器能正確看懂 import 語法不會當機 -->
+    <script type="text/babel" data-type="module" data-presets="react">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
         import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, addDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
@@ -37,15 +38,39 @@
         // ⚠️ 第一階段任務：請在此處填入您的 Firebase 設定
         // ==========================================
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-         apiKey: "AIzaSyAeJVFba8QO4jY7-FiYZ7AwFqAnLSSOpes",
-  authDomain: "schoolreceipt.firebaseapp.com",
-  databaseURL: "https://schoolreceipt-default-rtdb.firebaseio.com",
-  projectId: "schoolreceipt",
-  storageBucket: "schoolreceipt.firebasestorage.app",
-  messagingSenderId: "659224947682",
-  appId: "1:659224947682:web:354676983bfe48343127bb",
-  measurementId: "G-ERJXNF3JTG
+            // 👇 👇 👇 未來要上傳 GitHub 時，將 Firebase 控制台給您的設定貼在這裡 👇 👇 👇
+            // apiKey: "xxxxxxxxx",
+            // authDomain: "xxxxxxxxx",
+            // projectId: "xxxxxxxxx",
+            // storageBucket: "xxxxxxxxx",
+            // messagingSenderId: "xxxxxxxxx",
+            // appId: "xxxxxxxxx"
+            // 👆 👆 👆 未來要上傳 GitHub 時，將 Firebase 控制台給您的設定貼在這裡 👆 👆 👆
         };
+
+        // 🔥 修正 2：新增防呆機制！如果忘記填寫金鑰，不要顯示白畫面，而是給予友善的圖文提示
+        if (!firebaseConfig.apiKey && typeof __firebase_config === 'undefined') {
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(
+                <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gray-100 print:hidden">
+                    <div className="bg-white p-8 rounded-3xl shadow-2xl max-w-lg w-full border-t-8 border-red-500 text-center animate-in zoom-in-95">
+                        <h1 className="text-5xl mb-4">⚠️</h1>
+                        <h2 className="text-2xl font-bold text-red-600 mb-4">尚未設定 Firebase 金鑰</h2>
+                        <div className="text-gray-600 text-left space-y-2 bg-red-50 p-5 rounded-xl border border-red-100 text-sm leading-relaxed">
+                            <p className="font-bold text-red-800">系統偵測到您的 <code>firebaseConfig</code> 還是空白的。</p>
+                            <p>這會導致網頁無法連線而當機。請按照以下步驟完成設定：</p>
+                            <ol className="list-decimal ml-5 mt-2 space-y-1 font-medium">
+                                <li>用記事本打開您的 <code>index.html</code></li>
+                                <li>找到第 35 行附近的 <code>const firebaseConfig = &#123; ... &#125;</code></li>
+                                <li>將您從 Firebase 控制台複製的真實金鑰貼進去<br/>(注意：要記得把 <code>//</code> 註解符號拿掉喔！)</li>
+                                <li>存檔並重新上傳到 GitHub，重新整理網頁即可！</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            );
+            throw new Error("Missing Firebase Config");
+        }
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);

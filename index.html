@@ -20,7 +20,7 @@
 <body class="m-0 p-0 text-gray-900 bg-gray-50">
     <div id="root"></div>
 
-    <!-- 🔥 data-presets="react" 確保瀏覽器能正確看懂 React 語法 -->
+    <!-- data-presets="react" 確保瀏覽器能正確看懂 React 語法 -->
     <script type="text/babel" data-type="module" data-presets="react">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
         import { getAuth, onAuthStateChanged, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
@@ -31,24 +31,23 @@
         // ==========================================
         // 🔥 系統同步頻道設定
         // ==========================================
-        // 自動判斷：在 Canvas 測試環境下使用系統合法 ID 以通過權限檢查，發布到外部 (如 GitHub) 時自動切換為您的專屬代碼。
         const MY_PROJECT_ID = typeof __app_id !== 'undefined' ? __app_id : "Taiwan-Teachers-Secure-Receipt"; 
 
         // ==========================================
         // ⚠️ 第一階段任務：請在此處填入您的 Firebase 設定
         // ==========================================
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-           apiKey: "AIzaSyAeJVFba8QO4jY7-FiYZ7AwFqAnLSSOpes",
-  authDomain: "schoolreceipt.firebaseapp.com",
-  databaseURL: "https://schoolreceipt-default-rtdb.firebaseio.com",
-  projectId: "schoolreceipt",
-  storageBucket: "schoolreceipt.firebasestorage.app",
-  messagingSenderId: "659224947682",
-  appId: "1:659224947682:web:354676983bfe48343127bb",
-  measurementId: "G-ERJXNF3JTG"
+            // 👇 👇 👇 未來要上傳 GitHub 時，將 Firebase 控制台給您的設定貼在這裡 👇 👇 👇
+            // apiKey: "xxxxxxxxx",
+            // authDomain: "xxxxxxxxx",
+            // projectId: "xxxxxxxxx",
+            // storageBucket: "xxxxxxxxx",
+            // messagingSenderId: "xxxxxxxxx",
+            // appId: "xxxxxxxxx"
+            // 👆 👆 👆 未來要上傳 GitHub 時，將 Firebase 控制台給您的設定貼在這裡 👆 👆 👆
         };
 
-        // 🔥 防呆機制：如果忘記填寫金鑰，給予友善的圖文提示
+        // 防呆機制：如果忘記填寫金鑰，給予友善的圖文提示
         if (!firebaseConfig.apiKey && typeof __firebase_config === 'undefined') {
             const root = ReactDOM.createRoot(document.getElementById('root'));
             root.render(
@@ -61,7 +60,7 @@
                             <p>這會導致網頁無法連線而當機。請按照以下步驟完成設定：</p>
                             <ol className="list-decimal ml-5 mt-2 space-y-1 font-medium">
                                 <li>用記事本打開您的 <code>index.html</code></li>
-                                <li>找到第 35 行附近的 <code>const firebaseConfig = &#123; ... &#125;</code></li>
+                                <li>找到第 36 行附近的 <code>const firebaseConfig = &#123; ... &#125;</code></li>
                                 <li>將您從 Firebase 控制台複製的真實金鑰貼進去<br/>(注意：要記得把 <code>//</code> 註解符號拿掉喔！)</li>
                                 <li>存檔並重新上傳到 GitHub，重新整理網頁即可！</li>
                             </ol>
@@ -107,11 +106,11 @@
         };
 
         const validatePassword = (pw) => {
-            const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])(?!.*admin)(?=.{6,})/;
+            // 放寬密碼限制：至少 6 碼，包含英文與數字即可
+            const regex = /^(?=.*[a-zA-Z])(?=.*[0-9])(?=.{6,})/;
             return regex.test(pw);
         };
 
-        // 安全升級：使用 crypto.getRandomValues
         const generateRandomKey = () => {
             const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
             const randomValues = new Uint32Array(32);
@@ -354,7 +353,7 @@
                 return () => unsubscribe();
             }, []);
 
-            // 🔥 處理 Google 登入視窗的邏輯
+            // 處理 Google 登入視窗的邏輯
             const handleGoogleLogin = async () => {
                 const provider = new GoogleAuthProvider();
                 try {
@@ -440,7 +439,7 @@
                 </div>
             );
 
-            // 🔥 強制登入的閘門畫面 (如果尚未登入，將顯示此畫面擋住所有內容)
+            // 強制登入的閘門畫面 (如果尚未登入，將顯示此畫面擋住所有內容)
             if (!user) return (
                 <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4 print:hidden">
                     <div className="bg-white p-10 rounded-3xl shadow-2xl max-w-md w-full text-center border-t-8 border-blue-500 animate-in zoom-in-95">
@@ -535,15 +534,22 @@
                 const handleInitSystem = async (e) => {
                     e.preventDefault();
                     if (!user) return showToast("❌ 尚未完成系統連線，請稍後");
-                    if (newKey !== newKeyConfirm) return showToast("兩次輸入的密碼不一致！");
-                    if (!validatePassword(newKey)) return showToast("密碼強度不足！需包含大小寫、數字、特殊符號且長度 > 6。");
+                    if (newKey !== newKeyConfirm) return alert("❌ 兩次輸入的密碼不一致！");
+                    if (!validatePassword(newKey)) return alert("❌ 密碼強度不足！\n\n請至少輸入 6 個字元，且必須同時包含「英文」與「數字」。\n(已為您放寬原本需要特殊符號的限制)");
                     try {
                         const token = encryptPayload('master-check', newKey);
                         await setDoc(doc(db, 'artifacts', MY_PROJECT_ID, 'public', 'data', 'config', 'auth'), { verifyToken: token }, { merge: true });
                         setAdminLoginPwd(newKey);
                         setIsAdminAuthenticated(true);
                         showToast('✅ 管理者登入密碼設定完成！請接續設定公鑰憑證。');
-                    } catch(e) { showToast('初始化失敗。'); }
+                    } catch(e) { 
+                        console.error("Firebase SetDoc Error:", e);
+                        if (e.code === 'permission-denied') {
+                            alert("❌ 儲存失敗：資料庫權限不足！\n\n請回到 Firebase 控制台 -> Firestore Database -> Rules (規則)，檢查是否已貼上教學中的設定並發布。");
+                        } else {
+                            alert("❌ 系統初始化失敗\n原因：" + e.message + "\n\n請確認您是否已在 Firebase 左側選單中，點擊並建立了「Firestore Database」資料庫！");
+                        }
+                    }
                 };
 
                 const handleSkipPwdInit = async () => {
@@ -554,7 +560,12 @@
                         setIsAdminAuthenticated(true);
                         showToast("已使用預設密碼 admin 進入測試模式。");
                     } catch(e) {
-                        showToast("設定失敗，請檢查網路。");
+                        console.error("Firebase SetDoc Error:", e);
+                        if (e.code === 'permission-denied') {
+                            alert("❌ 儲存失敗：資料庫權限不足！\n\n請回到 Firebase 控制台 -> Firestore Database -> Rules (規則)，檢查是否已設定正確。");
+                        } else {
+                            alert("❌ 系統初始化設定失敗\n原因：" + e.message + "\n\n請確認您是否已在 Firebase 建立「Firestore Database」！");
+                        }
                     }
                 };
 
@@ -568,7 +579,7 @@
                         </p>
                         <form onSubmit={handleInitSystem} className="space-y-4">
                             <div className="relative">
-                                <input required type={showNewKey ? "text" : "password"} placeholder="設定管理密碼 (大小寫+數字+符號)" className="w-full p-4 border rounded-xl pr-12 focus:border-indigo-500 outline-none" value={newKey} onChange={e => setNewKey(e.target.value)} />
+                                <input required type={showNewKey ? "text" : "password"} placeholder="設定管理密碼 (大小寫+數字)" className="w-full p-4 border rounded-xl pr-12 focus:border-indigo-500 outline-none" value={newKey} onChange={e => setNewKey(e.target.value)} />
                                 <button type="button" onClick={() => setShowNewKey(!showNewKey)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-500"><EyeIcon show={showNewKey} /></button>
                             </div>
                             <div className="relative">
@@ -705,7 +716,7 @@
                 if (!canvasRef.current) return;
                 const ctx = canvasRef.current.getContext('2d');
                 ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+                ctx.fillRect(0, 0, canvasRef.current.width, canvasEl.height);
                 setSignatureUrl(null); 
             };
             const confirmSignature = () => { 
@@ -819,7 +830,7 @@
                                 </div>
                             )}
                             <div className="mt-8 border-t pt-6 text-center">
-                                <span className="text-gray-400 text-xs block mb-3">具領人簽章：</span>
+                                    <span className="text-gray-400 text-xs block mb-3">具領人簽章：</span>
                                 <div className="p-4 bg-gray-50 rounded-xl inline-block border-2 border-dashed border-gray-200">
                                     <img src={signatureUrl} alt="簽名" className="max-h-24" />
                                 </div>
@@ -849,7 +860,7 @@
                     {authConfig.publicKey ? (
                         <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl text-green-800 text-sm flex items-center gap-3">
                             <span className="text-2xl">🛡️</span>
-                            <p>本系統已啟動端到端非對稱加密。**您的資料將在送出時被全自動高強度加密**，保障個資安全，您只需專心填寫即可。</p>
+                            <p>本系統已啟動端到端非對稱加密。**您的資料將在送出時被全自動高強度加密**，保障個資安全，您講師只需專心填寫即可。</p>
                         </div>
                     ) : (
                         <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-xl text-orange-800 text-sm flex items-center gap-3">
@@ -1341,7 +1352,7 @@
                 
                 if (e2eeFormData.oldKey !== adminLoginPwd) { showToast('❌ 舊密碼錯誤！'); return; }
                 if (e2eeFormData.newKey !== e2eeFormData.confirmKey) { showToast('❌ 兩次輸入的新密碼不一致！'); return; }
-                if (!validatePassword(e2eeFormData.newKey)) { showToast("❌ 密碼強度不足！需包含大小寫、數字、特殊符號且長度 > 6。"); return; }
+                if (!validatePassword(e2eeFormData.newKey)) { showToast("❌ 密碼強度不足！需包含英文、數字且長度 >= 6。"); return; }
 
                 try {
                     showToast('正在重新設定保護鎖，請稍候...');
@@ -1572,386 +1583,389 @@
                                             <td className="p-4 text-center">
                                                 {i.decryptionFailed ? '-' : i.signatureUrl ? (
                                                     <button onClick={() => setPreviewImageUrl(i.signatureUrl)} className="inline-block px-3 py-1.5 bg-green-100 text-green-700 font-bold rounded-lg hover:bg-green-200 transition-colors shadow-sm" title="點擊預覽列印簽名">✔ 預覽</button>
-                                                ) : (
-                                                    <label className="cursor-pointer inline-block px-3 py-1.5 bg-gray-100 text-gray-500 rounded-lg hover:bg-gray-200 text-xs font-bold transition-colors shadow-sm" title="上傳簽名圖檔">
-                                                        ✍️ 上傳
-                                                        <input type="file" accept="image/jpeg, image/png" className="hidden" onChange={(e) => handleQuickUpload(i.id, 'signatureUrl', e)} />
-                                                    </label>
-                                                )}
-                                            </td>
-                                            <td className="p-4 text-right flex justify-end gap-2 items-center">
-                                                <button disabled={i.decryptionFailed} onClick={() => handleSinglePrint(i)} className={`px-4 py-2 rounded-xl font-bold shadow transition-all whitespace-nowrap ${i.decryptionFailed ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700 hover:scale-105'}`}>
-                                                    單筆處理 👉
-                                                </button>
-                                                <button onClick={() => setDeleteConfirmId(i.id)} className="px-4 py-2 rounded-xl font-bold shadow transition-all whitespace-nowrap bg-red-100 text-red-600 hover:bg-red-200 hover:scale-105">
-                                                    刪除
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    {/* 修改密碼彈窗 (兼稍後設定開關) */}
-                    {isChangeE2eeModalOpen && (
-                        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex justify-center items-center p-4">
-                            <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md border-t-8 border-indigo-500 animate-in zoom-in-95">
-                                <h3 className="text-2xl font-bold mb-2 text-gray-800">
-                                    🔑 修改管理員密碼
-                                </h3>
-                                <p className="text-xs text-gray-500 mb-6 bg-gray-50 p-2 rounded">
-                                    修改密碼不影響歷史資料，系統會秒速套用新密碼保護您的私鑰。
-                                </p>
-                                <form onSubmit={handleUpdateE2eeKey} className="space-y-4">
-                                    <div className="relative">
-                                        <input required type={showOldKey ? "text" : "password"} placeholder="請輸入【舊】密碼" className="w-full p-4 border rounded-xl pr-12 focus:border-indigo-500 outline-none" value={e2eeFormData.oldKey} onChange={e => setE2eeFormData({...e2eeFormData, oldKey: e.target.value})} />
-                                        <button type="button" onClick={() => setShowOldKey(!showOldKey)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-500"><EyeIcon show={showOldKey} /></button>
-                                    </div>
-                                    <div className="relative">
-                                        <input required type={showNewKey ? "text" : "password"} placeholder="【新】密碼 (大小寫+數字+符號)" className="w-full p-4 border rounded-xl pr-12 focus:border-indigo-500 outline-none" value={e2eeFormData.newKey} onChange={e => setE2eeFormData({...e2eeFormData, newKey: e.target.value})} />
-                                        <button type="button" onClick={() => setShowNewKey(!showNewKey)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-500"><EyeIcon show={showNewKey} /></button>
-                                    </div>
-                                    <div className="relative">
-                                        <input required type={showConfirmKey ? "text" : "password"} placeholder="再次確認密碼" className="w-full p-4 border rounded-xl pr-12 focus:border-indigo-500 outline-none" value={e2eeFormData.confirmKey} onChange={e => setE2eeFormData({...e2eeFormData, confirmKey: e.target.value})} />
-                                        <button type="button" onClick={() => setShowConfirmKey(!showConfirmKey)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-500"><EyeIcon show={showConfirmKey} /></button>
-                                    </div>
-
-                                    {/* 稍後設定 切換開關 */}
-                                    <div className="mt-6 pt-4 border-t border-gray-100">
-                                        <label className="flex items-center space-x-3 cursor-pointer p-3 bg-indigo-50 rounded-xl border border-indigo-100">
-                                            <input type="checkbox" checked={authConfig.allowSkipPwd !== false} onChange={e => handleToggleAllowSkip(e.target.checked)} className="w-5 h-5 accent-indigo-600 cursor-pointer" />
-                                            <div className="flex flex-col">
-                                                <span className="text-sm font-bold text-indigo-900">允許「稍後設定」密碼 (供測試用)</span>
-                                                <span className="text-xs text-indigo-700 mt-1">初次進入系統可略過密碼。正式上線建議取消。</span>
-                                            </div>
-                                        </label>
-                                    </div>
-
-                                    <div className="flex gap-4 mt-6 pt-4 border-t border-gray-100">
-                                        <button type="button" onClick={() => { setIsChangeE2eeModalOpen(false); setE2eeFormData({ oldKey: '', newKey: '', confirmKey: '' }); }} className="flex-1 py-4 border-2 border-gray-100 rounded-2xl font-bold text-gray-400 hover:bg-gray-50 transition-colors">取消</button>
-                                        <button type="submit" className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg hover:bg-indigo-700 transition-shadow">
-                                            確認修改
+                                        ) : (
+                                            <label className="cursor-pointer inline-block px-3 py-1.5 bg-gray-100 text-gray-500 rounded-lg hover:bg-gray-200 text-xs font-bold transition-colors shadow-sm" title="上傳簽名圖檔">
+                                                ✍️ 上傳
+                                                <input type="file" accept="image/jpeg, image/png" className="hidden" onChange={(e) => handleQuickUpload(i.id, 'signatureUrl', e)} />
+                                            </label>
+                                        )}
+                                    </td>
+                                    <td className="p-4 text-right flex justify-end gap-2 items-center">
+                                        <button disabled={i.decryptionFailed} onClick={() => handleSinglePrint(i)} className={`px-4 py-2 rounded-xl font-bold shadow transition-all whitespace-nowrap ${i.decryptionFailed ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700 hover:scale-105'}`}>
+                                            單筆處理 👉
                                         </button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* 圖檔附件預覽彈窗 (雙控滑桿 + 網頁直出PDF) */}
-                    {previewImageUrl && (
-                        <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-10 print-hide" onClick={() => setPreviewImageUrl(null)}>
-                            <div className="relative w-full max-w-4xl bg-white rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
-                                
-                                <div className="bg-gray-900 text-white p-4 flex flex-col sm:flex-row justify-between items-center shrink-0 gap-4">
-                                    <h3 className="text-xl font-bold flex items-center gap-2">🖼️ 圖檔排版</h3>
-                                    
-                                    <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2 w-full sm:w-auto bg-gray-800 p-2 rounded-xl">
-                                        <span className="flex items-center gap-2 text-xs font-bold text-gray-300">
-                                            紙張: A4
-                                        </span>
-                                        
-                                        <label className="flex items-center gap-2 text-xs font-bold text-gray-300">
-                                            ↔️ 左右移:
-                                            <input type="range" min="-300" max="300" step="5" value={imageOffsetX} onChange={(e) => setImageOffsetX(parseInt(e.target.value) || 0)} className="w-16 accent-yellow-400 hidden sm:block" />
-                                            <input type="number" value={imageOffsetX} onChange={(e) => setImageOffsetX(parseInt(e.target.value) || 0)} className="w-12 px-1 text-center text-black rounded outline-none" /> px
-                                        </label>
-                                        <label className="flex items-center gap-2 text-xs font-bold text-gray-300">
-                                            ↕️ 上下移:
-                                            <input type="range" min="-300" max="300" step="5" value={imageOffsetY} onChange={(e) => setImageOffsetY(parseInt(e.target.value) || 0)} className="w-16 accent-yellow-400 hidden sm:block" />
-                                            <input type="number" value={imageOffsetY} onChange={(e) => setImageOffsetY(parseInt(e.target.value) || 0)} className="w-12 px-1 text-center text-black rounded outline-none" /> px
-                                        </label>
-                                        <label className="flex items-center gap-2 text-xs font-bold text-gray-300">
-                                            🔍 縮放:
-                                            <input type="range" min="10" max="200" step="5" value={imageScalePercent} onChange={(e) => setImageScalePercent(parseInt(e.target.value) || 100)} className="w-16 accent-blue-500 hidden sm:block" />
-                                            <input type="number" min="10" max="200" step="1" value={Math.round(imageScalePercent)} onChange={(e) => setImageScalePercent(parseInt(e.target.value) || 100)} className="w-12 px-1 text-center text-black rounded outline-none" /> %
-                                        </label>
-                                        
-                                        <div className="flex gap-2">
-                                            <button onClick={handleNativeImagePrint} className="bg-blue-600 px-4 py-2 rounded-lg font-bold hover:bg-blue-700 shadow-md flex items-center gap-2 active:scale-95 transition-all text-sm whitespace-nowrap">
-                                                🖨️ 產生 PDF 並列印
-                                            </button>
-                                        </div>
-                                        
-                                        <button onClick={() => setPreviewImageUrl(null)} className="text-gray-400 hover:text-red-500 font-bold text-2xl transition-colors ml-2 px-2">
-                                            ✕
+                                        <button onClick={() => setDeleteConfirmId(i.id)} className="px-4 py-2 rounded-xl font-bold shadow transition-all whitespace-nowrap bg-red-100 text-red-600 hover:bg-red-200 hover:scale-105">
+                                            刪除
                                         </button>
-                                    </div>
-                                </div>
-
-                                <div className="p-6 bg-gray-200 flex justify-center items-start overflow-auto flex-1 relative">
-                                    <div id="image-print-root" className="bg-white shadow-xl mx-auto relative flex flex-col items-center justify-center p-[15mm] shrink-0" style={{ 
-                                        width: '210mm',
-                                        minWidth: '210mm',
-                                        height: '297mm',
-                                        minHeight: '297mm',
-                                        boxSizing: 'border-box',
-                                        overflow: 'hidden'
-                                    }}>
-                                        <div className="scale-container" style={{ transform: `translate(${imageOffsetX}px, ${imageOffsetY}px) scale(${imageScalePercent / 100})`, transformOrigin: 'center center', width: '100%', display: 'flex', justifyContent: 'center' }}>
-                                            <img src={previewImageUrl} alt="Preview" className="max-w-full object-contain pointer-events-none" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* 清空確認彈窗 */}
-                    {isClearModalOpen && (
-                        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex justify-center items-center p-4">
-                            <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-sm border border-gray-100 text-center animate-in zoom-in-95">
-                                <div className="text-5xl mb-4">⚠️</div>
-                                <h3 className="text-2xl font-bold mb-2 text-red-600">警告：清空所有資料</h3>
-                                <p className="text-gray-600 text-sm mb-6">您確定要刪除講師清單中的所有資料嗎？<br/>此操作<span className="font-bold text-red-600 underline">無法復原</span>，建議您先進行「匯出資料」備份。</p>
-                                <div className="flex gap-4 mt-6">
-                                    <button onClick={() => setIsClearModalOpen(false)} className="flex-1 py-3 border-2 border-gray-200 rounded-2xl font-bold text-gray-500 hover:bg-gray-50">取消</button>
-                                    <button onClick={handleClearAllData} className="flex-1 py-3 bg-red-600 text-white rounded-2xl font-bold shadow-lg hover:bg-red-700">確定清空</button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* 單一刪除確認彈窗 */}
-                    {deleteConfirmId && (
-                        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex justify-center items-center p-4">
-                            <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-sm border border-gray-100 text-center animate-in zoom-in-95">
-                                <div className="text-5xl mb-4">⚠️</div>
-                                <h3 className="text-2xl font-bold mb-2 text-red-600">確定刪除此筆資料？</h3>
-                                <p className="text-gray-600 text-sm mb-6">此操作<span className="font-bold text-red-600 underline">無法復原</span>。</p>
-                                <div className="flex gap-4 mt-6">
-                                    <button onClick={() => setDeleteConfirmId(null)} className="flex-1 py-3 border-2 border-gray-200 rounded-2xl font-bold text-gray-500 hover:bg-gray-50">取消</button>
-                                    <button onClick={handleConfirmSingleDelete} className="flex-1 py-3 bg-red-600 text-white rounded-2xl font-bold shadow-lg hover:bg-red-700">確定刪除</button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* 手動新增彈窗 (包含自動加密機制) */}
-                    {isAddModalOpen && (
-                        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex justify-center items-center p-4">
-                            <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-2xl border border-gray-100 max-h-[90vh] overflow-y-auto">
-                                <h3 className="text-2xl font-bold mb-6 text-gray-800">建立講師基本個資 <span className="bg-indigo-100 text-indigo-700 text-xs px-2 py-1 rounded ml-2">本機安全加密中</span></h3>
-                                <form onSubmit={handleAdminAddSubmit} className="space-y-6">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div><label className="block text-sm font-bold text-gray-700 mb-1">講師姓名 <span className="text-red-500">*</span></label><input required type="text" className="w-full p-3 border rounded-xl shadow-inner bg-gray-50 focus:bg-white transition-all" value={addFormData.name} onChange={e => setAddFormData({...addFormData, name: e.target.value})} /></div>
-                                        <div><label className="block text-sm font-bold text-gray-700 mb-1">身分證字號 <span className="text-red-500">*</span></label><input required type="text" className="w-full p-3 border rounded-xl shadow-inner bg-gray-50 focus:bg-white transition-all" value={addFormData.idNumber} onChange={e => setAddFormData({...addFormData, idNumber: e.target.value})} /></div>
-                                    </div>
-                                    <div><label className="block text-sm font-bold text-gray-700 mb-1">戶籍地址 <span className="text-red-500">*</span></label><input required type="text" className="w-full p-3 border rounded-xl shadow-inner bg-gray-50 focus:bg-white transition-all" value={addFormData.address} onChange={e => setAddFormData({...addFormData, address: e.target.value})} /></div>
-                                    <div><label className="block text-sm font-bold text-gray-700 mb-1">聯絡電話 <span className="text-red-500">*</span></label><input required type="text" className="w-full p-3 border rounded-xl shadow-inner bg-gray-50 focus:bg-white transition-all" value={addFormData.phone} onChange={e => setAddFormData({...addFormData, phone: e.target.value})} /></div>
-
-                                    <div className="border-2 border-blue-50 p-6 rounded-2xl bg-blue-50/30">
-                                        <label className="block text-base font-bold text-blue-900 mb-4 flex items-center gap-2">🏦 匯款帳號資訊 <span className="text-red-500">*</span></label>
-                                        <div className="space-y-4">
-                                            <div className="flex gap-6">
-                                                <label className="flex items-center space-x-2 cursor-pointer"><input type="radio" value="bank" checked={addFormData.bankType === 'bank'} onChange={e => setAddFormData({...addFormData, bankType: e.target.value})} className="w-4 h-4" /> <span className="font-medium">一般銀行</span></label>
-                                                <label className="flex items-center space-x-2 cursor-pointer"><input type="radio" value="post" checked={addFormData.bankType === 'post'} onChange={e => setAddFormData({...addFormData, bankType: e.target.value})} className="w-4 h-4" /> <span className="font-medium">中華郵政</span></label>
-                                                <label className="flex items-center space-x-2 cursor-pointer"><input type="radio" value="other" checked={addFormData.bankType === 'other'} onChange={e => setAddFormData({...addFormData, bankType: e.target.value})} className="w-4 h-4" /> <span className="font-medium">親自領取</span></label>
-                                            </div>
-                                            {addFormData.bankType === 'bank' && <div className="grid grid-cols-2 gap-2 animate-in fade-in slide-in-from-top-1"><input required type="text" placeholder="銀行名" className="p-3 border rounded-xl bg-white" value={addFormData.bankName} onChange={e => setAddFormData({...addFormData, bankName: e.target.value})}/><input required type="text" placeholder="完整帳號" className="p-3 border rounded-xl bg-white" value={addFormData.bankAccount} onChange={e => setAddFormData({...addFormData, bankAccount: e.target.value})}/></div>}
-                                            {addFormData.bankType === 'post' && <div className="grid grid-cols-2 gap-2 animate-in fade-in slide-in-from-top-1"><input required type="text" placeholder="局號 (7碼)" className="p-3 border rounded-xl bg-white" value={addFormData.postOffice} onChange={e => setAddFormData({...addFormData, postOffice: e.target.value})}/><input required type="text" placeholder="帳號 (7碼)" className="p-3 border rounded-xl bg-white" value={addFormData.postAccount} onChange={e => setAddFormData({...addFormData, postAccount: e.target.value})}/></div>}
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="flex gap-4 mt-6 pt-4 border-t">
-                                        <button type="button" onClick={() => setIsAddModalOpen(false)} className="flex-1 py-4 border rounded-2xl font-bold text-gray-400 hover:bg-gray-50">取消</button>
-                                        <button type="submit" className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg hover:bg-indigo-700">自動加密並儲存</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    )}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
-            );
-        }
+            </div>
 
-        function ReceiptView({ setView, config, instructors, showToast, sysConfig }) {
-            const [showSignature, setShowSignature] = useState(true);
-            
-            // 雙控設計：支援滑桿與數字填寫
-            const [scalePercent, setScalePercent] = useState(85);
-            const [marginY, setMarginY] = useState(15);
-            const [marginX, setMarginX] = useState(15);
-            const [paperSize, setPaperSize] = useState('a4');
+            {/* 修改密碼彈窗 */}
+            {isChangeE2eeModalOpen && (
+                <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex justify-center items-center p-4">
+                    <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md border-t-8 border-indigo-500 animate-in zoom-in-95">
+                        <h3 className="text-2xl font-bold mb-2 text-gray-800">
+                            🔑 修改管理員密碼
+                        </h3>
+                        <p className="text-xs text-gray-500 mb-6 bg-gray-50 p-2 rounded">
+                            修改密碼不影響歷史資料，系統會秒速套用新密碼保護您的私鑰。
+                        </p>
+                        <form onSubmit={handleUpdateE2eeKey} className="space-y-4">
+                            <div className="relative">
+                                <input required type={showOldKey ? "text" : "password"} placeholder="請輸入【舊】密碼" className="w-full p-4 border rounded-xl pr-12 focus:border-indigo-500 outline-none" value={e2eeFormData.oldKey} onChange={e => setE2eeFormData({...e2eeFormData, oldKey: e.target.value})} />
+                                <button type="button" onClick={() => setShowOldKey(!showOldKey)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-500"><EyeIcon show={showOldKey} /></button>
+                            </div>
+                            <div className="relative">
+                                <input required type={showNewKey ? "text" : "password"} placeholder="【新】密碼 (大小寫+數字)" className="w-full p-4 border rounded-xl pr-12 focus:border-indigo-500 outline-none" value={e2eeFormData.newKey} onChange={e => setE2eeFormData({...e2eeFormData, newKey: e.target.value})} />
+                                <button type="button" onClick={() => setShowNewKey(!showNewKey)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-500"><EyeIcon show={showNewKey} /></button>
+                            </div>
+                            <div className="relative">
+                                <input required type={showConfirmKey ? "text" : "password"} placeholder="再次確認密碼" className="w-full p-4 border rounded-xl pr-12 focus:border-indigo-500 outline-none" value={e2eeFormData.confirmKey} onChange={e => setE2eeFormData({...e2eeFormData, confirmKey: e.target.value})} />
+                                <button type="button" onClick={() => setShowConfirmKey(!showConfirmKey)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-indigo-500"><EyeIcon show={showConfirmKey} /></button>
+                            </div>
 
-            // 核心 PDF 生成引擎：建立隱藏離線畫布確保絕對不跑版
-            const createPDF = async () => {
-                if (!window.jspdf || !window.html2canvas) {
-                    showToast('PDF 引擎載入中，請稍候再試...');
-                    return null;
-                }
-                
-                // 建立離線畫布容器，避免截圖受到螢幕解析度或捲軸的影響
-                const tempContainer = document.createElement('div');
-                tempContainer.style.position = 'absolute';
-                tempContainer.style.top = '-9999px';
-                tempContainer.style.left = '0';
-                tempContainer.style.width = paperSize === 'a4' ? '210mm' : '176mm';
-                tempContainer.style.background = 'white';
-                
-                const originalPages = document.querySelectorAll('.a4-page');
-                originalPages.forEach(page => {
-                    const clone = page.cloneNode(true);
-                    
-                    // 清理影響截圖的樣式，但「絕對保留」原有的 transform: scale 設定
-                    clone.style.margin = '0';
-                    clone.style.boxShadow = 'none';
-                    
-                    // 移除裁切虛線 (避免出現在正式 PDF 中)
-                    const cutLines = clone.querySelectorAll('.cut-line');
-                    cutLines.forEach(el => el.remove());
-                    
-                    tempContainer.appendChild(clone);
-                });
-                
-                document.body.appendChild(tempContainer);
-                const pdf = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: paperSize });
-
-                try {
-                    const tempPages = tempContainer.childNodes;
-                    for (let i = 0; i < tempPages.length; i++) {
-                        if (i > 0) pdf.addPage();
-                        
-                        // 強制 html2canvas 使用標準寬度擷取，確保所見即所得
-                        const canvas = await window.html2canvas(tempPages[i], { 
-                            scale: 2, 
-                            useCORS: true, 
-                            logging: false, 
-                            backgroundColor: '#ffffff',
-                            windowWidth: tempContainer.scrollWidth 
-                        });
-
-                        const imgData = canvas.toDataURL('image/jpeg', 1.0);
-                        const pdfWidth = pdf.internal.pageSize.getWidth();
-                        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-                        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-                    }
-                    return pdf;
-                } catch (error) {
-                    console.error(error);
-                    showToast('❌ PDF 產生失敗，請稍後再試。');
-                    return null;
-                } finally {
-                    if (document.body.contains(tempContainer)) {
-                        document.body.removeChild(tempContainer);
-                    }
-                }
-            };
-
-            // 瀏覽器原生列印：直接產生不跑版的 PDF 並在新分頁彈出觸發列印
-            const handleNativePrint = async () => {
-                showToast('📄 產生高畫質列印檔中，請稍候...');
-                const pdf = await createPDF();
-                if (pdf) {
-                    // 讓 PDF 開啟時自動呼叫列印對話框
-                    pdf.autoPrint({variant: 'non-conform'});
-                    const blob = pdf.output('blob');
-                    const blobUrl = URL.createObjectURL(blob);
-                    const win = window.open(blobUrl);
-                    if (!win) {
-                        showToast('⚠️ 瀏覽器阻擋了彈出視窗，改為直接下載，請開啟檔案後手動列印。');
-                        pdf.save(`講師領據_列印檔.pdf`);
-                    }
-                }
-            };
-
-            const pages = [];
-            for(let i = 0; i < instructors.length; i += 2) {
-                pages.push(instructors.slice(i, i + 2));
-            }
-
-            return (
-                <div className="bg-white relative pb-20 print-hide">
-                    {/* 上方操作列 */}
-                    <div className="bg-gray-900 text-white p-4 flex flex-col sm:flex-row justify-between items-center sticky top-0 z-[150] shadow-2xl gap-4">
-                        <div className="flex items-center gap-4 w-full sm:w-auto">
-                            <button onClick={() => setView('admin')} className="text-gray-400 hover:text-white flex items-center gap-1 transition-colors whitespace-nowrap">← 返回</button>
-                            <span className="font-bold border-l border-gray-700 pl-4 tracking-wide text-sm truncate">
-                                排版並列印 {instructors.length} 張領據
-                            </span>
-                        </div>
-                        
-                        {/* 產生控制面板 (包含邊界、縮放、匯出按鈕) */}
-                        <div className="flex flex-wrap items-center justify-end gap-x-6 gap-y-3 w-full lg:w-auto bg-gray-800 p-3 rounded-xl shadow-inner">
-                            
-                            {/* 雙控設計：邊界滑桿與數值輸入區塊 */}
-                            <div className="flex items-center gap-4 bg-gray-700 px-4 py-2 rounded-lg border border-gray-600 w-full sm:w-auto">
-                                <label className="flex items-center gap-2 text-xs font-bold text-gray-300">
-                                    ↔️ 左右距:
-                                    <input type="range" min="0" max="80" step="1" value={marginX} onChange={(e) => setMarginX(parseFloat(e.target.value))} className="w-16 accent-yellow-400 hidden lg:block" />
-                                    <input type="number" min="0" max="80" value={marginX} onChange={(e) => setMarginX(parseInt(e.target.value) || 0)} className="w-12 px-1 text-center text-black rounded outline-none" /> mm
-                                </label>
-                                <label className="flex items-center gap-2 text-xs font-bold text-gray-300 border-l border-gray-500 pl-4">
-                                    ↕️ 上下距:
-                                    <input type="range" min="0" max="80" step="1" value={marginY} onChange={(e) => setMarginY(parseFloat(e.target.value))} className="w-16 accent-yellow-400 hidden lg:block" />
-                                    <input type="number" min="0" max="80" value={marginY} onChange={(e) => setMarginY(parseInt(e.target.value) || 0)} className="w-12 px-1 text-center text-black rounded outline-none" /> mm
+                            {/* 稍後設定 切換開關 */}
+                            <div className="mt-6 pt-4 border-t border-gray-100">
+                                <label className="flex items-center space-x-3 cursor-pointer p-3 bg-indigo-50 rounded-xl border border-indigo-100">
+                                    <input type="checkbox" checked={authConfig.allowSkipPwd !== false} onChange={e => handleToggleAllowSkip(e.target.checked)} className="w-5 h-5 accent-indigo-600 cursor-pointer" />
+                                    <div className="flex flex-col">
+                                        <span className="text-sm font-bold text-indigo-900">允許「稍後設定」密碼 (供測試用)</span>
+                                        <span className="text-xs text-indigo-700 mt-1">初次進入系統可略過密碼。正式上線建議取消。</span>
+                                    </div>
                                 </label>
                             </div>
 
-                            <div className="flex items-center gap-4 w-full sm:w-auto">
+                            <div className="flex gap-4 mt-6 pt-4 border-t border-gray-100">
+                                <button type="button" onClick={() => { setIsChangeE2eeModalOpen(false); setE2eeFormData({ oldKey: '', newKey: '', confirmKey: '' }); }} className="flex-1 py-4 border-2 border-gray-100 rounded-2xl font-bold text-gray-400 hover:bg-gray-50 transition-colors">取消</button>
+                                <button type="submit" className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg hover:bg-indigo-700 transition-shadow">
+                                    確認修改
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* 圖檔附件預覽彈窗 (雙控滑桿 + 網頁直出PDF) */}
+            {previewImageUrl && (
+                <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-10 print-hide" onClick={() => setPreviewImageUrl(null)}>
+                    <div className="relative w-full max-w-4xl bg-white rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                        
+                        <div className="bg-gray-900 text-white p-4 flex flex-col sm:flex-row justify-between items-center shrink-0 gap-4">
+                            <h3 className="text-xl font-bold flex items-center gap-2">🖼️ 圖檔排版</h3>
+                            
+                            <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2 w-full sm:w-auto bg-gray-800 p-2 rounded-xl">
+                                <span className="flex items-center gap-2 text-xs font-bold text-gray-300">
+                                    紙張: A4
+                                </span>
+                                
+                                <label className="flex items-center gap-2 text-xs font-bold text-gray-300">
+                                    ↔️ 左右移:
+                                    <input type="range" min="-300" max="300" step="5" value={imageOffsetX} onChange={(e) => setImageOffsetX(parseInt(e.target.value) || 0)} className="w-16 accent-yellow-400 hidden sm:block" />
+                                    <input type="number" value={imageOffsetX} onChange={(e) => setImageOffsetX(parseInt(e.target.value) || 0)} className="w-12 px-1 text-center text-black rounded outline-none" /> px
+                                </label>
+                                <label className="flex items-center gap-2 text-xs font-bold text-gray-300">
+                                    ↕️ 上下移:
+                                    <input type="range" min="-300" max="300" step="5" value={imageOffsetY} onChange={(e) => setImageOffsetY(parseInt(e.target.value) || 0)} className="w-16 accent-yellow-400 hidden sm:block" />
+                                    <input type="number" value={imageOffsetY} onChange={(e) => setImageOffsetY(parseInt(e.target.value) || 0)} className="w-12 px-1 text-center text-black rounded outline-none" /> px
+                                </label>
                                 <label className="flex items-center gap-2 text-xs font-bold text-gray-300">
                                     🔍 縮放:
-                                    <input type="range" min="50" max="150" step="1" value={scalePercent} onChange={(e) => setScalePercent(parseInt(e.target.value) || 100)} className="w-16 accent-blue-500 hidden sm:block" />
-                                    <input type="number" min="10" max="200" step="1" value={scalePercent} onChange={(e) => setScalePercent(parseInt(e.target.value) || 100)} className="w-12 px-1 text-center text-black rounded outline-none" /> %
+                                    <input type="range" min="10" max="200" step="5" value={imageScalePercent} onChange={(e) => setImageScalePercent(parseInt(e.target.value) || 100)} className="w-16 accent-blue-500 hidden sm:block" />
+                                    <input type="number" min="10" max="200" step="1" value={Math.round(imageScalePercent)} onChange={(e) => setImageScalePercent(parseInt(e.target.value) || 100)} className="w-12 px-1 text-center text-black rounded outline-none" /> %
                                 </label>
-                                <label className="flex items-center gap-1 cursor-pointer text-xs font-bold text-gray-300 hover:text-white transition-colors border-l border-gray-600 pl-4">
-                                    <input type="checkbox" checked={showSignature} onChange={(e) => setShowSignature(e.target.checked)} className="w-4 h-4 accent-blue-500 cursor-pointer" />
-                                    簽名
-                                </label>
-                            </div>
-                            
-                            <div className="flex items-center gap-2 w-full sm:w-auto">
-                                <button onClick={handleNativePrint} className="flex-1 sm:flex-none bg-blue-600 px-4 py-2 rounded-lg font-bold hover:bg-blue-700 shadow-md flex justify-center items-center gap-2 active:scale-95 transition-all text-sm whitespace-nowrap">
-                                    🖨️ 產生 PDF 並列印
+                                
+                                <div className="flex gap-2">
+                                    <button onClick={handleNativeImagePrint} className="bg-blue-600 px-4 py-2 rounded-lg font-bold hover:bg-blue-700 shadow-md flex items-center gap-2 active:scale-95 transition-all text-sm whitespace-nowrap">
+                                        🖨️ 產生 PDF 並列印
+                                    </button>
+                                </div>
+                                
+                                <button onClick={() => setPreviewImageUrl(null)} className="text-gray-400 hover:text-red-500 font-bold text-2xl transition-colors ml-2 px-2">
+                                    ✕
                                 </button>
                             </div>
                         </div>
-                    </div>
-                    
-                    {/* 預覽與列印內容區塊 */}
-                    <div className="w-full flex flex-col items-center py-10 bg-gray-200 min-h-screen">
-                        <div id="print-root" className="w-full mx-auto flex flex-col items-center">
-                            
-                            {pages.map((pageInstructors, pageIndex) => (
-                                <div key={pageIndex} className="bg-white shadow-2xl mb-8 relative a4-page flex flex-col justify-between"
-                                     style={{ 
-                                         width: paperSize === 'a4' ? '210mm' : '176mm', 
-                                         minWidth: paperSize === 'a4' ? '210mm' : '176mm',
-                                         height: paperSize === 'a4' ? '297mm' : '250mm', 
-                                         padding: `${marginY}mm ${marginX}mm`,
-                                         boxSizing: 'border-box', 
-                                         backgroundColor: 'white',
-                                         overflow: 'hidden'
-                                     }}>
-                                    
-                                    {pageInstructors.map((instructor, itemIndex) => (
-                                        <React.Fragment key={instructor.id}>
-                                            <div className="flex-1 flex flex-col justify-start items-center overflow-hidden w-full relative">
-                                                {/* Transform scale 控制內容大小 */}
-                                                <div className="scale-container" style={{ transform: `scale(${scalePercent / 100})`, transformOrigin: 'top center', width: `${100 / (scalePercent / 100)}%` }}>
-                                                    <ReceiptTemplate config={config} instructor={instructor} sysConfig={sysConfig} showSignature={showSignature} />
-                                                </div>
-                                            </div>
-                                            
-                                            {/* 兩張領據中間的裁切虛線 */}
-                                            {itemIndex === 0 && pageInstructors.length > 1 && (
-                                                <div className="cut-line w-full border-t border-dashed border-gray-400 relative flex items-center justify-center" style={{ height: '0', margin: '2mm 0' }}>
-                                                    <span className="absolute bg-white px-2 text-gray-500 text-[10px] tracking-widest">✂️ 裁切線 (列印時隱藏)</span>
-                                                </div>
-                                            )}
-                                        </React.Fragment>
-                                    ))}
-                                    
-                                </div>
-                            ))}
 
+                        <div className="p-6 bg-gray-200 flex justify-center items-start overflow-auto flex-1 relative">
+                            <div id="image-print-root" className="bg-white shadow-xl mx-auto relative flex flex-col items-center justify-center p-[15mm] shrink-0" style={{ 
+                                width: '210mm',
+                                minWidth: '210mm',
+                                height: '297mm',
+                                minHeight: '297mm',
+                                boxSizing: 'border-box',
+                                overflow: 'hidden'
+                            }}>
+                                <div className="scale-container" style={{ transform: `translate(${imageOffsetX}px, ${imageOffsetY}px) scale(${imageScalePercent / 100})`, transformOrigin: 'center center', width: '100%', display: 'flex', justifyContent: 'center' }}>
+                                    <img src={previewImageUrl} alt="Preview" className="max-w-full object-contain pointer-events-none" />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            );
+            )}
+
+            {/* 清空確認彈窗 */}
+            {isClearModalOpen && (
+                <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex justify-center items-center p-4">
+                    <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-sm border border-gray-100 text-center animate-in zoom-in-95">
+                        <div className="text-5xl mb-4">⚠️</div>
+                        <h3 className="text-2xl font-bold mb-2 text-red-600">警告：清空所有資料</h3>
+                        <p className="text-gray-600 text-sm mb-6">您確定要刪除講師清單中的所有資料嗎？<br/>此操作<span className="font-bold text-red-600 underline">無法復原</span>，建議您先進行「匯出資料」備份。</p>
+                        <div className="flex gap-4 mt-6">
+                            <button onClick={() => setIsClearModalOpen(false)} className="flex-1 py-3 border-2 border-gray-200 rounded-2xl font-bold text-gray-500 hover:bg-gray-50">取消</button>
+                            <button onClick={handleClearAllData} className="flex-1 py-3 bg-red-600 text-white rounded-2xl font-bold shadow-lg hover:bg-red-700">確定清空</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 單一刪除確認彈窗 */}
+            {deleteConfirmId && (
+                <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex justify-center items-center p-4">
+                    <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-sm border border-gray-100 text-center animate-in zoom-in-95">
+                        <div className="text-5xl mb-4">⚠️</div>
+                        <h3 className="text-2xl font-bold mb-2 text-red-600">確定刪除此筆資料？</h3>
+                        <p className="text-gray-600 text-sm mb-6">此操作<span className="font-bold text-red-600 underline">無法復原</span>。</p>
+                        <div className="flex gap-4 mt-6">
+                            <button onClick={() => setDeleteConfirmId(null)} className="flex-1 py-3 border-2 border-gray-200 rounded-2xl font-bold text-gray-500 hover:bg-gray-50">取消</button>
+                            <button onClick={handleConfirmSingleDelete} className="flex-1 py-3 bg-red-600 text-white rounded-2xl font-bold shadow-lg hover:bg-red-700">確定刪除</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 手動新增彈窗 (包含自動加密機制) */}
+            {isAddModalOpen && (
+                <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex justify-center items-center p-4">
+                    <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-2xl border border-gray-100 max-h-[90vh] overflow-y-auto">
+                        <h3 className="text-2xl font-bold mb-6 text-gray-800">建立講師基本個資 <span className="bg-indigo-100 text-indigo-700 text-xs px-2 py-1 rounded ml-2">本機安全加密中</span></h3>
+                        <form onSubmit={handleAdminAddSubmit} className="space-y-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div><label className="block text-sm font-bold text-gray-700 mb-1">講師姓名 <span className="text-red-500">*</span></label><input required type="text" className="w-full p-3 border rounded-xl shadow-inner bg-gray-50 focus:bg-white transition-all" value={addFormData.name} onChange={e => setAddFormData({...addFormData, name: e.target.value})} /></div>
+                                <div><label className="block text-sm font-bold text-gray-700 mb-1">身分證字號 <span className="text-red-500">*</span></label><input required type="text" className="w-full p-3 border rounded-xl shadow-inner bg-gray-50 focus:bg-white transition-all" value={addFormData.idNumber} onChange={e => setAddFormData({...addFormData, idNumber: e.target.value})} /></div>
+                            </div>
+                            <div><label className="block text-sm font-bold text-gray-700 mb-1">戶籍地址 <span className="text-red-500">*</span></label><input required type="text" className="w-full p-3 border rounded-xl shadow-inner bg-gray-50 focus:bg-white transition-all" value={addFormData.address} onChange={e => setAddFormData({...addFormData, address: e.target.value})} /></div>
+                            <div><label className="block text-sm font-bold text-gray-700 mb-1">聯絡電話 <span className="text-red-500">*</span></label><input required type="text" className="w-full p-3 border rounded-xl shadow-inner bg-gray-50 focus:bg-white transition-all" value={addFormData.phone} onChange={e => setAddFormData({...addFormData, phone: e.target.value})} /></div>
+
+                            <div className="border-2 border-blue-50 p-6 rounded-2xl bg-blue-50/30">
+                                <label className="block text-base font-bold text-blue-900 mb-4 flex items-center gap-2">🏦 匯款帳號資訊 <span className="text-red-500">*</span></label>
+                                <div className="space-y-4">
+                                    <div className="flex gap-6">
+                                        <label className="flex items-center space-x-2 cursor-pointer"><input type="radio" value="bank" checked={addFormData.bankType === 'bank'} onChange={e => setAddFormData({...addFormData, bankType: e.target.value})} className="w-4 h-4" /> <span className="font-medium">一般銀行</span></label>
+                                        <label className="flex items-center space-x-2 cursor-pointer"><input type="radio" value="post" checked={addFormData.bankType === 'post'} onChange={e => setAddFormData({...addFormData, bankType: e.target.value})} className="w-4 h-4" /> <span className="font-medium">中華郵政</span></label>
+                                        <label className="flex items-center space-x-2 cursor-pointer"><input type="radio" value="other" checked={addFormData.bankType === 'other'} onChange={e => setAddFormData({...addFormData, bankType: e.target.value})} className="w-4 h-4" /> <span className="font-medium">親自領取</span></label>
+                                    </div>
+                                    {addFormData.bankType === 'bank' && <div className="grid grid-cols-2 gap-2 animate-in fade-in slide-in-from-top-1"><input required type="text" placeholder="銀行名" className="p-3 border rounded-xl bg-white" value={addFormData.bankName} onChange={e => setAddFormData({...addFormData, bankName: e.target.value})}/><input required type="text" placeholder="完整帳號" className="p-3 border rounded-xl bg-white" value={addFormData.bankAccount} onChange={e => setAddFormData({...addFormData, bankAccount: e.target.value})}/></div>}
+                                    {addFormData.bankType === 'post' && <div className="grid grid-cols-2 gap-2 animate-in fade-in slide-in-from-top-1"><input required type="text" placeholder="局號 (7碼)" className="p-3 border rounded-xl bg-white" value={addFormData.postOffice} onChange={e => setAddFormData({...addFormData, postOffice: e.target.value})}/><input required type="text" placeholder="帳號 (7碼)" className="p-3 border rounded-xl bg-white" value={addFormData.postAccount} onChange={e => setAddFormData({...addFormData, postAccount: e.target.value})}/></div>}
+                                </div>
+                            </div>
+                            
+                            <div className="flex gap-4 mt-6 pt-4 border-t">
+                                <button type="button" onClick={() => setIsAddModalOpen(false)} className="flex-1 py-4 border rounded-2xl font-bold text-gray-400 hover:bg-gray-50">取消</button>
+                                <button type="submit" className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg hover:bg-indigo-700">自動加密並儲存</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function ReceiptView({ setView, config, instructors, showToast, sysConfig }) {
+    const [showSignature, setShowSignature] = useState(true);
+    
+    // 雙控設計：支援滑桿與數字填寫
+    const [scalePercent, setScalePercent] = useState(85);
+    const [marginY, setMarginY] = useState(15);
+    const [marginX, setMarginX] = useState(15);
+    const [paperSize, setPaperSize] = useState('a4');
+
+    // 核心 PDF 生成引擎：建立隱藏離線畫布確保絕對不跑版
+    const createPDF = async () => {
+        if (!window.jspdf || !window.html2canvas) {
+            showToast('PDF 引擎載入中，請稍候再試...');
+            return null;
         }
+        
+        // 建立離線畫布容器，避免截圖受到螢幕解析度或捲軸的影響
+        const tempContainer = document.createElement('div');
+        tempContainer.style.position = 'absolute';
+        tempContainer.style.top = '-9999px';
+        tempContainer.style.left = '0';
+        tempContainer.style.width = paperSize === 'a4' ? '210mm' : '176mm';
+        tempContainer.style.background = 'white';
+        
+        const originalPages = document.querySelectorAll('.a4-page');
+        originalPages.forEach(page => {
+            const clone = page.cloneNode(true);
+            
+            // 清理影響截圖的樣式，但「絕對保留」原有的 transform: scale 設定
+            clone.style.margin = '0';
+            clone.style.boxShadow = 'none';
+            
+            // 移除裁切虛線 (避免出現在正式 PDF 中)
+            const cutLines = clone.querySelectorAll('.cut-line');
+            cutLines.forEach(el => el.remove());
+            
+            tempContainer.appendChild(clone);
+        });
+        
+        document.body.appendChild(tempContainer);
+        const pdf = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: paperSize });
+
+        try {
+            const tempPages = tempContainer.childNodes;
+            for (let i = 0; i < tempPages.length; i++) {
+                if (i > 0) pdf.addPage();
+                
+                // 強制 html2canvas 使用標準寬度擷取，確保所見即所得
+                const canvas = await window.html2canvas(tempPages[i], { 
+                    scale: 2, 
+                    useCORS: true, 
+                    logging: false, 
+                    backgroundColor: '#ffffff',
+                    windowWidth: tempContainer.scrollWidth 
+                });
+
+                const imgData = canvas.toDataURL('image/jpeg', 1.0);
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+            }
+            return pdf;
+        } catch (error) {
+            console.error(error);
+            showToast('❌ PDF 產生失敗，請稍候再試。');
+            return null;
+        } finally {
+            if (document.body.contains(tempContainer)) {
+                document.body.removeChild(tempContainer);
+            }
+        }
+    };
+
+    // 瀏覽器原生列印：直接產生不跑版的 PDF 並在新分頁彈出觸發列印
+    const handleNativePrint = async () => {
+        showToast('📄 產生高畫質列印檔中，請稍候...');
+        const pdf = await createPDF();
+        if (pdf) {
+            // 讓 PDF 開啟時自動呼叫列印對話框
+            pdf.autoPrint({variant: 'non-conform'});
+            const blob = pdf.output('blob');
+            const blobUrl = URL.createObjectURL(blob);
+            const win = window.open(blobUrl);
+            if (!win) {
+                showToast('⚠️ 瀏覽器阻擋了彈出視窗，改為直接下載，請開啟檔案後手動列印。');
+                pdf.save(`講師領據_列印檔.pdf`);
+            }
+        }
+    };
+
+    const pages = [];
+    for(let i = 0; i < instructors.length; i += 2) {
+        pages.push(instructors.slice(i, i + 2));
+    }
+
+    return (
+        <div className="bg-white relative pb-20 print-hide">
+            {/* 上方操作列 */}
+            <div className="bg-gray-900 text-white p-4 flex flex-col sm:flex-row justify-between items-center sticky top-0 z-[150] shadow-2xl gap-4">
+                <div className="flex items-center gap-4 w-full sm:w-auto">
+                    <button onClick={() => setView('admin')} className="text-gray-400 hover:text-white flex items-center gap-1 transition-colors whitespace-nowrap">← 返回</button>
+                    <span className="font-bold border-l border-gray-700 pl-4 tracking-wide text-sm truncate">
+                        排版並列印 {instructors.length} 張領據
+                    </span>
+                </div>
+                
+                {/* 產生控制面板 (包含邊界、縮放、匯出按鈕) */}
+                <div className="flex flex-wrap items-center justify-end gap-x-6 gap-y-3 w-full lg:w-auto bg-gray-800 p-3 rounded-xl shadow-inner">
+                    
+                    {/* 雙控設計：邊界滑桿與數值輸入區塊 */}
+                    <div className="flex items-center gap-4 bg-gray-700 px-4 py-2 rounded-lg border border-gray-600 w-full sm:w-auto">
+                        <label className="flex items-center gap-2 text-xs font-bold text-gray-300">
+                            ↔️ 左右距:
+                            <input type="range" min="0" max="80" step="1" value={marginX} onChange={(e) => setMarginX(parseFloat(e.target.value))} className="w-16 accent-yellow-400 hidden lg:block" />
+                            <input type="number" min="0" max="80" value={marginX} onChange={(e) => setMarginX(parseInt(e.target.value) || 0)} className="w-12 px-1 text-center text-black rounded outline-none" /> mm
+                        </label>
+                        <label className="flex items-center gap-2 text-xs font-bold text-gray-300 border-l border-gray-500 pl-4">
+                            ↕️ 上下距:
+                            <input type="range" min="0" max="80" step="1" value={marginY} onChange={(e) => setMarginY(parseFloat(e.target.value))} className="w-16 accent-yellow-400 hidden lg:block" />
+                            <input type="number" min="0" max="80" value={marginY} onChange={(e) => setMarginY(parseInt(e.target.value) || 0)} className="w-12 px-1 text-center text-black rounded outline-none" /> mm
+                        </label>
+                    </div>
+
+                    <div className="flex items-center gap-4 w-full sm:w-auto">
+                        <label className="flex items-center gap-2 text-xs font-bold text-gray-300">
+                            🔍 縮放:
+                            <input type="range" min="50" max="150" step="1" value={scalePercent} onChange={(e) => setScalePercent(parseInt(e.target.value) || 100)} className="w-16 accent-blue-500 hidden sm:block" />
+                            <input type="number" min="10" max="200" step="1" value={scalePercent} onChange={(e) => setScalePercent(parseInt(e.target.value) || 100)} className="w-12 px-1 text-center text-black rounded outline-none" /> %
+                        </label>
+                        <label className="flex items-center gap-1 cursor-pointer text-xs font-bold text-gray-300 hover:text-white transition-colors border-l border-gray-600 pl-4">
+                            <input type="checkbox" checked={showSignature} onChange={(e) => setShowSignature(e.target.checked)} className="w-4 h-4 accent-blue-500 cursor-pointer" />
+                            簽名
+                        </label>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <button onClick={handleNativePrint} className="flex-1 sm:flex-none bg-blue-600 px-4 py-2 rounded-lg font-bold hover:bg-blue-700 shadow-md flex justify-center items-center gap-2 active:scale-95 transition-all text-sm whitespace-nowrap">
+                            🖨️ 產生 PDF 並列印
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            {/* 預覽與列印內容區塊 */}
+            <div className="w-full flex flex-col items-center py-10 bg-gray-200 min-h-screen">
+                <div id="print-root" className="w-full mx-auto flex flex-col items-center">
+                    
+                    {pages.map((pageInstructors, pageIndex) => (
+                        <div key={pageIndex} className="bg-white shadow-2xl mb-8 relative a4-page flex flex-col justify-between"
+                             style={{ 
+                                 width: paperSize === 'a4' ? '210mm' : '176mm', 
+                                 minWidth: paperSize === 'a4' ? '210mm' : '176mm',
+                                 height: paperSize === 'a4' ? '297mm' : '250mm', 
+                                 padding: `${marginY}mm ${marginX}mm`,
+                                 boxSizing: 'border-box', 
+                                 backgroundColor: 'white',
+                                 overflow: 'hidden'
+                             }}>
+                            
+                            {pageInstructors.map((instructor, itemIndex) => (
+                                <React.Fragment key={instructor.id}>
+                                    <div className="flex-1 flex flex-col justify-start items-center overflow-hidden w-full relative">
+                                        {/* Transform scale 控制內容大小 */}
+                                        <div className="scale-container" style={{ transform: `scale(${scalePercent / 100})`, transformOrigin: 'top center', width: `${100 / (scalePercent / 100)}%` }}>
+                                            <ReceiptTemplate config={config} instructor={instructor} sysConfig={sysConfig} showSignature={showSignature} />
+                                        </div>
+                                    </div>
+                                    
+                                    {/* 兩張領據中間的裁切虛線 */}
+                                    {itemIndex === 0 && pageInstructors.length > 1 && (
+                                        <div className="cut-line w-full border-t border-dashed border-gray-400 relative flex items-center justify-center" style={{ height: '0', margin: '2mm 0' }}>
+                                            <span className="absolute bg-white px-2 text-gray-500 text-[10px] tracking-widest">✂️ 裁切線 (列印時隱藏)</span>
+                                        </div>
+                                    )}
+                                </React.Fragment>
+                            ))}
+                            
+                            {pageInstructors.length === 1 && (
+                                <div className="flex-1 flex flex-col justify-start items-center overflow-hidden w-full relative"></div>
+                            )}
+                        </div>
+                    ))}
+
+                </div>
+            </div>
+        </div>
+    );
+}
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);

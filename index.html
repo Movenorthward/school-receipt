@@ -36,7 +36,7 @@
         // ⚠️ 請在此處填入您的 Firebase 設定
         // ==========================================
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-            apiKey: "AIzaSyAeJVFba8QO4jY7-FiYZ7AwFqAnLSSOpes",
+          apiKey: "AIzaSyAeJVFba8QO4jY7-FiYZ7AwFqAnLSSOpes",
   authDomain: "schoolreceipt.firebaseapp.com",
   databaseURL: "https://schoolreceipt-default-rtdb.firebaseio.com",
   projectId: "schoolreceipt",
@@ -175,7 +175,7 @@
         }
 
         // ==========================================
-        // 🔥 新增：直覺式簽名拖曳與縮放視窗元件
+        // 🔥 直覺式簽名拖曳與縮放視窗元件
         // ==========================================
         const SignatureAdjustModal = ({ instructor, initialTransform, onSave, onClose }) => {
             const [transform, setTransform] = useState(initialTransform || { x: 120, y: -10, width: 140 });
@@ -183,10 +183,8 @@
             const [isResizing, setIsResizing] = useState(false);
             const [startPos, setStartPos] = useState({x:0, y:0, startWidth:0});
 
-            // 處理圖片本體的拖曳 (移動 X, Y 位置)
             const handleDragStart = (e) => {
-                e.stopPropagation();
-                setIsDragging(true);
+                e.stopPropagation(); setIsDragging(true);
                 setStartPos({ x: e.clientX - transform.x, y: e.clientY - transform.y });
                 e.target.setPointerCapture(e.pointerId);
             };
@@ -194,15 +192,10 @@
                 if (!isDragging) return;
                 setTransform(prev => ({ ...prev, x: e.clientX - startPos.x, y: e.clientY - startPos.y }));
             };
-            const handleDragEnd = (e) => {
-                setIsDragging(false);
-                e.target.releasePointerCapture(e.pointerId);
-            };
+            const handleDragEnd = (e) => { setIsDragging(false); e.target.releasePointerCapture(e.pointerId); };
 
-            // 處理右下角藍點的拖曳 (改變 Width 寬度縮放)
             const handleResizeStart = (e) => {
-                e.stopPropagation();
-                setIsResizing(true);
+                e.stopPropagation(); setIsResizing(true);
                 setStartPos({ x: e.clientX, startWidth: transform.width });
                 e.target.setPointerCapture(e.pointerId);
             };
@@ -211,67 +204,34 @@
                 const deltaX = e.clientX - startPos.x;
                 setTransform(prev => ({ ...prev, width: Math.max(30, startPos.startWidth + deltaX) }));
             };
-            const handleResizeEnd = (e) => {
-                setIsResizing(false);
-                e.target.releasePointerCapture(e.pointerId);
-            };
+            const handleResizeEnd = (e) => { setIsResizing(false); e.target.releasePointerCapture(e.pointerId); };
 
             return (
                 <div className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center p-4 print-hide" onClick={onClose}>
                     <div className="bg-white p-6 rounded-3xl shadow-2xl w-full max-w-2xl flex flex-col animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
                         <h3 className="text-xl font-bold mb-2 text-center text-blue-900">調整 {instructor.name} 的簽名檔</h3>
-                        <p className="text-xs text-gray-500 mb-4 text-center bg-blue-50 p-2 rounded-lg">💡 可直接在下方<span className="font-bold text-blue-600">「拖曳簽名」</span>移動位置，或拖曳<span className="font-bold text-blue-600">「右下角藍點」</span>縮放大小。</p>
+                        <p className="text-xs text-gray-500 mb-4 text-center bg-blue-50 p-2 rounded-lg">💡 拖曳簽名移動位置，或拖曳右下角藍點縮放大小。</p>
                         
-                        {/* 模擬領據的格子 */}
                         <div className="bg-gray-100 p-8 rounded-xl flex justify-center mb-6 overflow-hidden border-2 border-dashed border-gray-300">
                             <div className="bg-white border-2 border-black w-full max-w-lg relative" style={{ height: '65px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', height: '100%', padding: '0 10px', position: 'relative' }}>
                                     <span style={{ fontSize: '1.25rem', fontWeight: 'bold', zIndex: 10 }}>{instructor.name}</span>
-                                    
                                     <div style={{ position: 'absolute', left: `${transform.x}px`, top: `${transform.y}px`, width: `${transform.width}px`, zIndex: 50, touchAction: 'none' }}>
-                                        <img 
-                                            src={instructor.signatureUrl} 
-                                            alt="Signature" 
-                                            style={{ width: '100%', height: 'auto', mixBlendMode: 'multiply', cursor: 'move', border: '2px dashed #93c5fd', backgroundColor: 'rgba(219, 234, 254, 0.4)' }} 
-                                            onPointerDown={handleDragStart}
-                                            onPointerMove={handleDragMove}
-                                            onPointerUp={handleDragEnd}
-                                            onPointerCancel={handleDragEnd}
-                                            draggable="false"
-                                        />
-                                        {/* 縮放控制拉柄 */}
-                                        <div 
-                                            style={{ position: 'absolute', right: '-10px', bottom: '-10px', width: '24px', height: '24px', backgroundColor: '#2563eb', borderRadius: '50%', cursor: 'se-resize', boxShadow: '0 2px 4px rgba(0,0,0,0.3)', border: '2px solid white' }}
-                                            onPointerDown={handleResizeStart}
-                                            onPointerMove={handleResizeMove}
-                                            onPointerUp={handleResizeEnd}
-                                            onPointerCancel={handleResizeEnd}
-                                            title="拖曳我來縮放簽名"
-                                        />
+                                        <img src={instructor.signatureUrl} alt="Signature" style={{ width: '100%', height: 'auto', mixBlendMode: 'multiply', cursor: 'move', border: '2px dashed #93c5fd', backgroundColor: 'rgba(219, 234, 254, 0.4)' }} onPointerDown={handleDragStart} onPointerMove={handleDragMove} onPointerUp={handleDragEnd} onPointerCancel={handleDragEnd} draggable="false" />
+                                        <div style={{ position: 'absolute', right: '-10px', bottom: '-10px', width: '24px', height: '24px', backgroundColor: '#2563eb', borderRadius: '50%', cursor: 'se-resize', boxShadow: '0 2px 4px rgba(0,0,0,0.3)', border: '2px solid white' }} onPointerDown={handleResizeStart} onPointerMove={handleResizeMove} onPointerUp={handleResizeEnd} onPointerCancel={handleResizeEnd} title="拖曳我來縮放簽名" />
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* 備用數值 Slider 調整 (確保全裝置通用) */}
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 bg-gray-50 p-4 rounded-xl">
-                            <label className="flex flex-col text-xs font-bold text-gray-700">
-                                ↔️ 左右定位: {Math.round(transform.x)}
-                                <input type="range" min="-50" max="400" value={transform.x} onChange={e => setTransform(p => ({...p, x: parseFloat(e.target.value)}))} className="mt-2 accent-blue-600" />
-                            </label>
-                            <label className="flex flex-col text-xs font-bold text-gray-700">
-                                ↕️ 上下定位: {Math.round(transform.y)}
-                                <input type="range" min="-100" max="100" value={transform.y} onChange={e => setTransform(p => ({...p, y: parseFloat(e.target.value)}))} className="mt-2 accent-blue-600" />
-                            </label>
-                            <label className="flex flex-col text-xs font-bold text-gray-700">
-                                🔍 縮放大小: {Math.round(transform.width)}
-                                <input type="range" min="30" max="300" value={transform.width} onChange={e => setTransform(p => ({...p, width: parseFloat(e.target.value)}))} className="mt-2 accent-blue-600" />
-                            </label>
+                            <label className="flex flex-col text-xs font-bold text-gray-700">↔️ 左右: {Math.round(transform.x)}<input type="range" min="-50" max="400" value={transform.x} onChange={e => setTransform(p => ({...p, x: parseFloat(e.target.value)}))} className="mt-2 accent-blue-600" /></label>
+                            <label className="flex flex-col text-xs font-bold text-gray-700">↕️ 上下: {Math.round(transform.y)}<input type="range" min="-100" max="100" value={transform.y} onChange={e => setTransform(p => ({...p, y: parseFloat(e.target.value)}))} className="mt-2 accent-blue-600" /></label>
+                            <label className="flex flex-col text-xs font-bold text-gray-700">🔍 大小: {Math.round(transform.width)}<input type="range" min="30" max="300" value={transform.width} onChange={e => setTransform(p => ({...p, width: parseFloat(e.target.value)}))} className="mt-2 accent-blue-600" /></label>
                         </div>
-
                         <div className="flex gap-4">
-                            <button onClick={onClose} className="flex-1 py-3 border-2 border-gray-200 rounded-xl font-bold text-gray-500 hover:bg-gray-50 transition-colors shadow-sm">取消</button>
-                            <button onClick={() => onSave(transform)} className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-colors text-lg tracking-widest">✔ 確定套用</button>
+                            <button onClick={onClose} className="flex-1 py-3 border-2 border-gray-200 rounded-xl font-bold text-gray-500 hover:bg-gray-50 transition-colors">取消</button>
+                            <button onClick={() => onSave(transform)} className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-colors">✔ 確定套用</button>
                         </div>
                     </div>
                 </div>
@@ -289,7 +249,6 @@
             const bgCyan = { backgroundColor: '#d1fae5', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' };
             const bgYellow = { backgroundColor: '#fef08a', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' };
 
-            // 讀取當前講師的專屬簽名定位，若無則套用預設值
             const transform = sigTransform || { x: 120, y: -10, width: 140 };
 
             return (
@@ -306,7 +265,6 @@
                             <tr><td colSpan="4" style={{...tdStyle, paddingLeft: '2rem', fontSize: '1.2rem', fontWeight: 'bold'}}>{config.schoolName}</td></tr>
                             <tr>
                                 <td style={{...tdStyle, textAlign: 'center', whiteSpace: 'nowrap'}}>具領人簽章：</td>
-                                {/* 🔥 修正：固定高度 65px 防止爆版，並加入點擊事件以觸發調整視窗 */}
                                 <td style={{...tdStyle, padding: '0', height: '65px', position: 'relative'}}>
                                     <div style={{ display: 'flex', alignItems: 'center', height: '100%', padding: '0 10px', position: 'relative' }}>
                                         <span style={{ fontSize: '1.25rem', fontWeight: 'bold', wordBreak: 'break-all', maxWidth: '40%', position: 'relative', zIndex: 10 }}>{instructor.name}</span>
@@ -406,7 +364,7 @@
                 return targetAdminId ? `${baseId}-${targetAdminId}` : baseId;
             }, [targetAdminId]);
 
-            // 1. 初始化資源與 Firebase Auth
+            // 1. 初始化資源與 Firebase Auth (🔥 修復：加入強制載入成功與 Canvas 測試網域繞過登入)
             useEffect(() => {
                 const loadScripts = async () => {
                     const scripts = [
@@ -422,7 +380,12 @@
                         if (!document.getElementById(s.id)) {
                             await new Promise(resolve => {
                                 const script = document.createElement('script');
-                                script.id = s.id; script.src = s.src; script.crossOrigin = "anonymous"; script.onload = resolve;
+                                script.id = s.id; 
+                                script.src = s.src;
+                                script.crossOrigin = "anonymous";
+                                script.onload = resolve;
+                                // 防呆：如果網路擋住套件，不要讓畫面永遠轉圈圈
+                                script.onerror = () => { console.warn('載入延遲:', s.src); resolve(); };
                                 document.body.appendChild(script);
                             });
                         }
@@ -431,12 +394,23 @@
                 };
                 loadScripts();
 
-                const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-                    if (!currentUser) {
-                        try { await signInAnonymously(auth); } catch (e) {}
-                    } else {
-                        setUser(currentUser);
+                // 🔥 嚴格的 Canvas 自動通關：確保測試環境抓到 Token 自動晉升管理員
+                const initAuth = async () => {
+                    try {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await signInWithCustomToken(auth, __initial_auth_token);
+                        } else {
+                            await signInAnonymously(auth);
+                        }
+                    } catch (error) { 
+                        console.error('連線異常，轉為訪客模式'); 
+                        try { await signInAnonymously(auth); } catch(e) {}
                     }
+                };
+                initAuth();
+
+                const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+                    if (currentUser) setUser(currentUser);
                 });
                 return () => unsubscribe();
             }, []);
@@ -486,7 +460,7 @@
             const handleGoogleLogin = async () => {
                 const provider = new GoogleAuthProvider();
                 try { await signInWithPopup(auth, provider); } 
-                catch (error) { alert("登入失敗: " + error.message); }
+                catch (error) { showToast("登入被阻擋或失敗，請確認視窗權限。"); }
             };
 
             const goAdmin = async () => {
@@ -500,10 +474,11 @@
                     } 
                     catch (error) { 
                         if (error.code !== 'auth/popup-closed-by-user') {
-                            alert("登入失敗: " + error.message); 
+                            showToast("⚠️ 彈出視窗被阻擋，或登入失敗。如果您在預覽模式，請使用外部網址開啟！"); 
                         }
                     }
                 } else {
+                    // 🔥 修復：Canvas 自動獲取 Token 後，會直接來到這一步，秒進後台！
                     sessionStorage.setItem('receipt_channel', user.uid);
                     setTargetAdminId(user.uid);
                     setView('admin');
@@ -514,7 +489,8 @@
                 if (targetAdminId) {
                     setView('instructor');
                 } else {
-                    alert("💡 溫馨提示\n\n如果您是講師：請直接點擊承辦人傳送給您的「專屬網址連結」來開啟表單！\n\n如果您是承辦人想測試：請先點擊旁邊的『⚙️ 行政管理員』進入後台即可測試。");
+                    // 🔥 修復：將 alert() 換成 showToast，防止 Canvas 安全機制鎖死畫面
+                    showToast("💡 講師請點擊承辦人的專屬網址。承辦人請先點擊『行政管理員』！");
                 }
             };
 
@@ -580,7 +556,7 @@
                         {view === 'admin' && <AdminView setView={setView} user={user} appId={MY_PROJECT_ID} targetAdminId={targetAdminId} showToast={showToast} />}
                         {view === 'instructor' && <InstructorView setView={setView} user={user} appId={MY_PROJECT_ID} targetAdminId={targetAdminId} showToast={showToast} />}
                     </div>
-                    <div className="text-center text-gray-400 text-sm py-4 print-hide font-bold">@2026 Master</div>
+                    <div className="text-center text-gray-400 text-sm py-4 print-hide font-bold">@2026 Master (版本：V3-Google實名頻道隔離版)</div>
                     <Toast message={toastMsg} onClose={() => setToastMsg('')} />
                 </div>
             );
@@ -637,7 +613,6 @@
                     const ctx = canvasEl.getContext('2d');
                     const rect = canvasEl.parentElement.getBoundingClientRect();
                     canvasEl.width = rect.width; canvasEl.height = rect.height;
-                    // 🔥 去背核心：不再填滿白色，而是清空為透明
                     ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
                     ctx.strokeStyle = '#000000'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
                 }, 100);
@@ -652,9 +627,7 @@
             const startDrawing = (e) => { setIsDrawing(true); const pos = getPos(e); canvasRef.current.getContext('2d').beginPath(); canvasRef.current.getContext('2d').moveTo(pos.x, pos.y); };
             const draw = (e) => { if (!isDrawing) return; const pos = getPos(e); canvasRef.current.getContext('2d').lineTo(pos.x, pos.y); canvasRef.current.getContext('2d').stroke(); };
             const stopDrawing = () => { if (isDrawing) { canvasRef.current.getContext('2d').closePath(); setIsDrawing(false); } };
-            // 🔥 去背核心：清除畫面改用 clearRect
             const clearSignature = () => { const ctx = canvasRef.current.getContext('2d'); ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height); setSignatureUrl(null); };
-            // 🔥 去背核心：存成 image/png 以支援透明通道
             const confirmSignature = () => { setSignatureUrl(canvasRef.current.toDataURL('image/png')); setIsSignModalOpen(false); };
 
             const handlePhotoUpload = async (e) => {
@@ -998,17 +971,39 @@
                 } catch (e) { showToast('系統設定存檔失敗'); }
             };
 
+            // 🔥 修復：安全複製網址，避免使用 prompt 被安全攔截
             const handleCopyShareLink = () => {
                 const baseUrl = window.location.href.split('#')[0];
                 const shareUrl = baseUrl + '#' + user.uid;
-                const el = document.createElement('textarea'); el.value = shareUrl; 
-                el.setAttribute('readonly', ''); el.style.position = 'absolute'; el.style.left = '-9999px';
-                document.body.appendChild(el); el.select(); el.setSelectionRange(0, 99999);
-                try {
-                    if (document.execCommand('copy')) showToast("📋 已複製！請將連結傳給講師，他們會自動被導引到您的頻道填寫。");
-                    else throw new Error('Failed');
-                } catch (err) { prompt("您的瀏覽器阻擋自動複製，請手動複製網址：", shareUrl); }
-                document.body.removeChild(el);
+                
+                const fallbackCopy = (text) => {
+                    const el = document.createElement('textarea'); 
+                    el.value = text; 
+                    el.setAttribute('readonly', ''); 
+                    el.style.position = 'absolute'; 
+                    el.style.left = '-9999px';
+                    document.body.appendChild(el); 
+                    el.select(); 
+                    el.setSelectionRange(0, 99999);
+                    try {
+                        if (document.execCommand('copy')) {
+                            showToast("📋 已複製！請將連結傳給講師。");
+                        } else {
+                            showToast("❌ 無法自動複製，請手動複製網址：" + text);
+                        }
+                    } catch (err) { 
+                        showToast("❌ 無法複製，您的代碼為：" + user.uid);
+                    }
+                    document.body.removeChild(el);
+                };
+
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(shareUrl).then(() => {
+                        showToast("📋 已複製專屬講師連結！");
+                    }).catch(() => fallbackCopy(shareUrl));
+                } else {
+                    fallbackCopy(shareUrl);
+                }
             };
 
             const handleSelectAll = () => {
@@ -1347,11 +1342,23 @@
                             <div className="relative w-full max-w-4xl bg-white rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
                                 <div className="bg-gray-900 text-white p-4 flex justify-between items-center shrink-0">
                                     <h3 className="text-xl font-bold">🖼️ 圖檔排版</h3>
-                                    <div className="flex items-center gap-x-4">
-                                        <label className="text-xs font-bold text-gray-300">↔️ 左右移: <input type="number" value={imageOffsetX} onChange={(e) => setImageOffsetX(parseInt(e.target.value) || 0)} className="w-12 px-1 text-center text-black rounded" /> px</label>
-                                        <label className="text-xs font-bold text-gray-300">↕️ 上下移: <input type="number" value={imageOffsetY} onChange={(e) => setImageOffsetY(parseInt(e.target.value) || 0)} className="w-12 px-1 text-center text-black rounded" /> px</label>
-                                        <label className="text-xs font-bold text-gray-300">🔍 縮放: <input type="number" min="10" max="200" value={Math.round(imageScalePercent)} onChange={(e) => setImageScalePercent(parseInt(e.target.value) || 100)} className="w-12 px-1 text-center text-black rounded" /> %</label>
-                                        <button onClick={handleNativeImagePrint} className="bg-blue-600 px-4 py-2 rounded-lg font-bold hover:bg-blue-700">🖨️ 列印</button>
+                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                                        <label className="flex items-center gap-2 text-xs font-bold text-gray-300">
+                                            ↔️ 左右移: 
+                                            <input type="range" min="-300" max="300" step="5" value={imageOffsetX} onChange={(e) => setImageOffsetX(parseInt(e.target.value) || 0)} className="w-16 accent-yellow-400 hidden sm:block" />
+                                            <input type="number" value={imageOffsetX} onChange={(e) => setImageOffsetX(parseInt(e.target.value) || 0)} className="w-12 px-1 text-center text-black rounded" /> px
+                                        </label>
+                                        <label className="flex items-center gap-2 text-xs font-bold text-gray-300">
+                                            ↕️ 上下移: 
+                                            <input type="range" min="-300" max="300" step="5" value={imageOffsetY} onChange={(e) => setImageOffsetY(parseInt(e.target.value) || 0)} className="w-16 accent-yellow-400 hidden sm:block" />
+                                            <input type="number" value={imageOffsetY} onChange={(e) => setImageOffsetY(parseInt(e.target.value) || 0)} className="w-12 px-1 text-center text-black rounded" /> px
+                                        </label>
+                                        <label className="flex items-center gap-2 text-xs font-bold text-gray-300">
+                                            🔍 縮放: 
+                                            <input type="range" min="10" max="200" step="5" value={imageScalePercent} onChange={(e) => setImageScalePercent(parseInt(e.target.value) || 100)} className="w-16 accent-blue-500 hidden sm:block" />
+                                            <input type="number" min="10" max="200" value={Math.round(imageScalePercent)} onChange={(e) => setImageScalePercent(parseInt(e.target.value) || 100)} className="w-12 px-1 text-center text-black rounded" /> %
+                                        </label>
+                                        <button onClick={handleNativeImagePrint} className="bg-blue-600 px-4 py-2 rounded-lg font-bold hover:bg-blue-700 ml-2">🖨️ 列印</button>
                                         <button onClick={() => setPreviewImageUrl(null)} className="text-gray-400 hover:text-red-500 font-bold text-2xl ml-2 px-2">✕</button>
                                     </div>
                                 </div>
@@ -1398,8 +1405,8 @@
             const [marginY, setMarginY] = useState(15);
             const [marginX, setMarginX] = useState(15);
             const [paperSize, setPaperSize] = useState('a4');
-            
-            // 🔥 新增：用來記錄每個講師簽名檔拖曳狀態的變數
+
+            // 🔥 新增：記錄每個講師的獨立簽名定位狀態
             const [sigTransforms, setSigTransforms] = useState({});
             const [editingInstructor, setEditingInstructor] = useState(null);
 
@@ -1486,8 +1493,8 @@
                             </div>
                         </div>
                     </div>
-                    
-                    {/* 🔥 新增：當點選簽名時彈出的調整視窗 */}
+
+                    {/* 🔥 當點擊簽名時彈出獨立視窗 */}
                     {editingInstructor && (
                         <SignatureAdjustModal 
                             instructor={editingInstructor}
@@ -1509,7 +1516,6 @@
                                         <React.Fragment key={instructor.id}>
                                             <div className="flex-1 flex flex-col justify-start items-center overflow-hidden w-full relative">
                                                 <div className="scale-container" style={{ transform: `scale(${scalePercent / 100})`, transformOrigin: 'top center', width: `${100 / (scalePercent / 100)}%` }}>
-                                                    {/* 🔥 傳入調整狀態與編輯點擊事件 */}
                                                     <ReceiptTemplate 
                                                         config={config} 
                                                         instructor={instructor} 

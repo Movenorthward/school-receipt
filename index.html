@@ -3,14 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 基礎 XSS 防護 -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: wss: data: blob:;">
     <title>經費領據管理系統 (Google實名安全版)</title>
     
+    <!-- 載入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
+    <!-- 載入 React 核心庫 -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     
+    <!-- 載入 Babel Standalone 用於在瀏覽器即時編譯 JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
 <body class="m-0 p-0 text-gray-900 bg-gray-50">
@@ -32,7 +36,7 @@
         // ⚠️ 請在此處填入您的 Firebase 設定
         // ==========================================
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-           apiKey: "AIzaSyAeJVFba8QO4jY7-FiYZ7AwFqAnLSSOpes",
+             apiKey: "AIzaSyAeJVFba8QO4jY7-FiYZ7AwFqAnLSSOpes",
   authDomain: "schoolreceipt.firebaseapp.com",
   databaseURL: "https://schoolreceipt-default-rtdb.firebaseio.com",
   projectId: "schoolreceipt",
@@ -195,10 +199,11 @@
                             <tr><td colSpan="4" style={{...tdStyle, paddingLeft: '2rem', fontSize: '1.2rem', fontWeight: 'bold'}}>{config.schoolName}</td></tr>
                             <tr>
                                 <td style={{...tdStyle, textAlign: 'center', whiteSpace: 'nowrap'}}>具領人簽章：</td>
-                                <td style={{...tdStyle, padding: '0', height: '40px', position: 'relative'}}>
+                                {/* 🔥 修正：調高欄位高度至 65px，字體加大至 1.25rem，並放大簽名圖片 */}
+                                <td style={{...tdStyle, padding: '0', height: '65px', position: 'relative'}}>
                                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '100%', padding: '0 10px' }}>
-                                        <span style={{ fontSize: '1.1rem', fontWeight: 'bold', wordBreak: 'break-all', maxWidth: '45%' }}>{instructor.name}</span>
-                                        {showSignature && instructor.signatureUrl && <img src={instructor.signatureUrl} alt="Signature" style={{ height: '100%', maxHeight: '35px', maxWidth: '55%', objectFit: 'contain' }} />}
+                                        <span style={{ fontSize: '1.25rem', fontWeight: 'bold', wordBreak: 'break-all', maxWidth: '40%' }}>{instructor.name}</span>
+                                        {showSignature && instructor.signatureUrl && <img src={instructor.signatureUrl} alt="Signature" style={{ maxHeight: '55px', maxWidth: '60%', objectFit: 'contain' }} />}
                                     </div>
                                 </td>
                                 <td style={{...tdStyle, textAlign: 'center', whiteSpace: 'nowrap'}}>身分證字號：</td>
@@ -266,7 +271,7 @@
             
             // 核心狀態：頻道 ID 與 視窗狀態
             const [targetAdminId, setTargetAdminId] = useState('');
-            const [view, setView] = useState(''); 
+            const [view, setView] = useState('home'); 
 
             // 用來儲存當前登入者是否已有專屬單位的狀態，用於客製化首頁標題
             const [homeSysConfig, setHomeSysConfig] = useState(null);
@@ -312,20 +317,18 @@
                 return () => unsubscribe();
             }, []);
 
-            // 2. 路由控制與瀏覽器暫存還原：完美解決手機 OAuth 弄丟網址的問題
+            // 2. 路由控制與瀏覽器暫存還原
             useEffect(() => {
                 const handleRouting = () => {
                     let hash = window.location.hash.substring(1);
                     
                     if (!hash) {
-                        // 若網址沒有 hash，嘗試從 sessionStorage 撈取先前記憶的頻道
                         const savedHash = sessionStorage.getItem('receipt_channel');
                         if (savedHash) {
                             hash = savedHash;
-                            window.location.hash = hash; // 自動幫他把網址補回來
+                            window.location.hash = hash; 
                         }
                     } else {
-                        // 若網址有 hash，死死記在瀏覽器底層，以防跳轉時弄丟
                         sessionStorage.setItem('receipt_channel', hash);
                     }
 
@@ -343,7 +346,7 @@
                 return () => window.removeEventListener('hashchange', handleRouting);
             }, []);
 
-            // 3. 當使用者以 Google 登入後，背景查詢他是否已經設定過單位名稱
+            // 3. 背景查詢是否已經設定過單位名稱
             useEffect(() => {
                 if (!user || user.isAnonymous) {
                     setHomeSysConfig(null);
@@ -398,7 +401,7 @@
                 </div>
             );
 
-            // 🌟 強制 Google 實名登入閘門 (只有在點擊帶 hash 的連結時才觸發)
+            // 🌟 強制 Google 實名登入閘門
             if (!user && targetAdminId) return (
                 <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4 print:hidden">
                     <div className="bg-white p-10 rounded-3xl shadow-2xl max-w-md w-full text-center border-t-8 border-blue-500 animate-in zoom-in-95">
@@ -417,20 +420,17 @@
                 <div className="flex flex-col min-h-screen bg-gray-50 font-sans text-gray-900 print:bg-white print:m-0 print:p-0" id="app-main-view">
                     <div className="flex-1 pb-12 print:pb-0 print:m-0 print:p-0">
                         
-                        {/* 🌟 永遠先顯示的首頁閘門 */}
                         {view === 'home' && (
                             <div className="flex flex-col items-center justify-center min-h-[85vh] p-6 print-hide">
                                 <div className="text-center mb-10 space-y-2">
                                     {homeSysConfig && !user?.isAnonymous ? (
                                         <>
-                                            {/* 🔥 管理員專屬標題 */}
                                             <h1 className="text-3xl sm:text-4xl font-extrabold text-blue-600 tracking-tight">{homeSysConfig.schoolName} {homeSysConfig.deptName}</h1>
                                             <h1 className="text-2xl sm:text-3xl font-extrabold text-blue-900 tracking-tight mt-2">領據管理系統</h1>
                                             <p className="text-gray-500 mt-2">管理員：{user.displayName || user.email}</p>
                                         </>
                                     ) : (
                                         <>
-                                            {/* 公版標題 */}
                                             <h1 className="text-3xl sm:text-4xl font-extrabold text-blue-900 tracking-tight">經費領據管理系統</h1>
                                             <p className="text-gray-500">歡迎使用本系統</p>
                                         </>
@@ -557,7 +557,7 @@
                     });
                     showToast('🔒 您的資料已完成自動加密並成功傳送給承辦人！');
                     window.location.hash = '';
-                    sessionStorage.removeItem('receipt_channel'); // 填寫完成後清除記憶
+                    sessionStorage.removeItem('receipt_channel'); 
                     setView('home');
                 } catch (error) { showToast(`❌ 上傳失敗`); } finally { setIsSubmitting(false); }
             };
@@ -609,11 +609,7 @@
 
             return (
                 <div className="max-w-2xl mx-auto my-10 p-8 bg-white rounded-3xl shadow-xl border border-gray-50 print-hide">
-                    <button onClick={() => { 
-                        window.location.hash=''; 
-                        sessionStorage.removeItem('receipt_channel'); 
-                        setView('home'); 
-                    }} className="mb-6 text-blue-600 flex items-center hover:underline">← 取消並返回首頁</button>
+                    <button onClick={() => { window.location.hash=''; sessionStorage.removeItem('receipt_channel'); setView('home'); }} className="mb-6 text-blue-600 flex items-center hover:underline">← 取消並返回首頁</button>
                     <div className="mb-8">
                         <p className="text-blue-500 text-xs font-bold uppercase tracking-widest mb-1">{sysConfig.schoolName} {sysConfig.deptName}</p>
                         <h2 className="text-2xl font-bold text-green-800 border-l-8 border-green-500 pl-4 flex items-center gap-2">講師領據資料填寫</h2>
@@ -711,6 +707,7 @@
             const [instructorsRaw, setInstructorsRaw] = useState([]);
             
             // 安全金鑰狀態
+            const [isAuthFetched, setIsAuthFetched] = useState(false); // 🔥 新增：確保先確認雲端金鑰狀態
             const [authConfig, setAuthConfig] = useState({ publicKey: null, encryptedPrivateKey: null });
             const [adminKey, setAdminKey] = useState(null);
             const [isGenerating, setIsGenerating] = useState(false);
@@ -719,7 +716,7 @@
             const [searchTerm, setSearchTerm] = useState('');
             const [selectedIds, setSelectedIds] = useState(new Set());
             const [selectedInstructors, setSelectedInstructors] = useState([]);
-            const [viewMode, setViewMode] = useState('dashboard'); // 'dashboard', 'receipt'
+            const [viewMode, setViewMode] = useState('dashboard');
             
             // 彈窗狀態
             const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -751,9 +748,18 @@
                     if (docSnap.exists() && docSnap.data().itemNames) setItemOptions(docSnap.data().itemNames);
                 }, (err) => console.error("options snapshot error:", err));
                 
+                // 🔥 修復金鑰覆蓋 Bug：確實等待快取讀取完畢
                 const unsubAuth = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', `auth_${channelId}`), (docSnap) => {
-                    if (docSnap.exists()) setAuthConfig(docSnap.data());
-                }, (err) => console.error("auth snapshot error:", err));
+                    if (docSnap.exists()) {
+                        setAuthConfig(docSnap.data());
+                    } else {
+                        setAuthConfig({ publicKey: null, encryptedPrivateKey: null });
+                    }
+                    setIsAuthFetched(true);
+                }, (err) => {
+                    console.error("auth snapshot error:", err);
+                    setIsAuthFetched(true);
+                });
                 
                 const unsubInstructors = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', `instructors_${channelId}`), (snapshot) => {
                     const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -804,8 +810,7 @@
 
             // --- 自動產生 RSA 金鑰 ---
             useEffect(() => {
-                if (!user) return; 
-                if (authConfig && authConfig.publicKey === undefined) return; 
+                if (!user || user.isAnonymous || !isAuthFetched) return; // 🔥 修復 Bug：確認資料庫讀取完畢才判斷
                 if (authConfig.publicKey === null && !isGenerating) {
                     setIsGenerating(true);
                     setTimeout(async () => {
@@ -823,7 +828,7 @@
                         finally { setIsGenerating(false); }
                     }, 500);
                 }
-            }, [authConfig.publicKey, isGenerating, appId, channelId, user]);
+            }, [authConfig.publicKey, isGenerating, appId, channelId, user, isAuthFetched]);
 
             const handleLogoutAdmin = async () => {
                 try { await signOut(auth); } catch(e) {}
@@ -879,7 +884,7 @@
                 try {
                     if (document.execCommand('copy')) showToast("📋 已複製！請將連結傳給講師，他們會自動被導引到您的頻道填寫。");
                     else throw new Error('Failed');
-                } catch (err) { prompt("您的瀏覽器阻擋自動複製，請手動複製網址：", shareUrl); }
+                } catch (err) { prompt("您的瀏覽器阻擋自動複製，請手手動複製網址：", shareUrl); }
                 document.body.removeChild(el);
             };
 

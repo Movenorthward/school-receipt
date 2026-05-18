@@ -1,5 +1,17 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
+<!-- 
+  =============================================================
+  🏷️ 版本代號：V4-浮空簽名去背版 (Master2026-Secure-V4)
+  
+  【核心更新紀錄】
+  1. 簽名檔自動去背：改用真正的透明背景 (image/png) 消除列印白塊。
+  2. 浮空簽名定位：簽名圖片採絕對定位，放大也不會撐破領據表格。
+  3. 直覺式拖曳排版：點擊簽名即可彈出調整視窗，支援拖曳與縮放。
+  4. 記憶路由防呆：加入 Session 暫存，解決手機跳轉登入後遺失代碼的 Bug。
+  5. PDF 直出引擎：列印採用隱形 A4 畫布轉換，確保 100% 絕對不跑版。
+  =============================================================
+-->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -36,7 +48,7 @@
         // ⚠️ 請在此處填入您的 Firebase 設定
         // ==========================================
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-          apiKey: "AIzaSyAeJVFba8QO4jY7-FiYZ7AwFqAnLSSOpes",
+           apiKey: "AIzaSyAeJVFba8QO4jY7-FiYZ7AwFqAnLSSOpes",
   authDomain: "schoolreceipt.firebaseapp.com",
   databaseURL: "https://schoolreceipt-default-rtdb.firebaseio.com",
   projectId: "schoolreceipt",
@@ -556,7 +568,7 @@
                         {view === 'admin' && <AdminView setView={setView} user={user} appId={MY_PROJECT_ID} targetAdminId={targetAdminId} showToast={showToast} />}
                         {view === 'instructor' && <InstructorView setView={setView} user={user} appId={MY_PROJECT_ID} targetAdminId={targetAdminId} showToast={showToast} />}
                     </div>
-                    <div className="text-center text-gray-400 text-sm py-4 print-hide font-bold">@2026 Master (版本：V3-Google實名頻道隔離版)</div>
+                    <div className="text-center text-gray-400 text-sm py-4 print-hide font-bold">@2026 Master (版本：V6)</div>
                     <Toast message={toastMsg} onClose={() => setToastMsg('')} />
                 </div>
             );
@@ -613,6 +625,7 @@
                     const ctx = canvasEl.getContext('2d');
                     const rect = canvasEl.parentElement.getBoundingClientRect();
                     canvasEl.width = rect.width; canvasEl.height = rect.height;
+                    // 🔥 去背修正 1：不再填滿白色背景，改為清空畫布維持透明
                     ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
                     ctx.strokeStyle = '#000000'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
                 }, 100);
@@ -627,7 +640,11 @@
             const startDrawing = (e) => { setIsDrawing(true); const pos = getPos(e); canvasRef.current.getContext('2d').beginPath(); canvasRef.current.getContext('2d').moveTo(pos.x, pos.y); };
             const draw = (e) => { if (!isDrawing) return; const pos = getPos(e); canvasRef.current.getContext('2d').lineTo(pos.x, pos.y); canvasRef.current.getContext('2d').stroke(); };
             const stopDrawing = () => { if (isDrawing) { canvasRef.current.getContext('2d').closePath(); setIsDrawing(false); } };
+            
+            // 🔥 去背修正 2：按下清除按鈕時，一樣使用 clearRect 保持透明
             const clearSignature = () => { const ctx = canvasRef.current.getContext('2d'); ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height); setSignatureUrl(null); };
+            
+            // 🔥 去背修正 3：輸出圖檔格式從 jpeg (不支援透明) 改為 png (原生支援透明)
             const confirmSignature = () => { setSignatureUrl(canvasRef.current.toDataURL('image/png')); setIsSignModalOpen(false); };
 
             const handlePhotoUpload = async (e) => {

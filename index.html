@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- 基礎 XSS 防護 -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: wss: data: blob:;">
-    <title>經費領據管理系統 (Google實名安全版)</title>
+    <title>經費領據管理系統</title>
     
     <!-- 載入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -36,7 +36,7 @@
         // ⚠️ 請在此處填入您的 Firebase 設定
         // ==========================================
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-           apiKey: "AIzaSyAeJVFba8QO4jY7-FiYZ7AwFqAnLSSOpes",
+         apiKey: "AIzaSyAeJVFba8QO4jY7-FiYZ7AwFqAnLSSOpes",
   authDomain: "schoolreceipt.firebaseapp.com",
   databaseURL: "https://schoolreceipt-default-rtdb.firebaseio.com",
   projectId: "schoolreceipt",
@@ -259,7 +259,10 @@
             );
         };
 
-        function App() {
+        // ==========================================
+        // 主程式 App
+        // ==========================================
+        export default function App() {
             const [user, setUser] = useState(null);
             const [isAppReady, setIsAppReady] = useState(false);
             const [toastMsg, setToastMsg] = useState('');
@@ -269,11 +272,8 @@
             const [targetAdminId, setTargetAdminId] = useState('');
             const [view, setView] = useState(''); 
 
-            // 動態 App ID，實現頻道隔離
-            const dynamicAppId = useMemo(() => {
-                const baseId = typeof __app_id !== 'undefined' ? __app_id : "Taiwan-Teachers-Secure-Receipt";
-                return targetAdminId ? `${baseId}-${targetAdminId}` : baseId;
-            }, [targetAdminId]);
+            // 🔥 新增：用來儲存當前登入者是否已有專屬單位的狀態，用於客製化首頁
+            const [homeSysConfig, setHomeSysConfig] = useState(null);
 
             // 1. 初始化資源與 Firebase Auth
             useEffect(() => {
@@ -336,6 +336,19 @@
                 return () => window.removeEventListener('hashchange', handleRouting);
             }, [user]);
 
+            // 🔥 新增：當使用者登入後，背景查詢他是否已經設定過單位名稱
+            useEffect(() => {
+                if (!user) return;
+                const unsub = onSnapshot(doc(db, 'artifacts', MY_PROJECT_ID, 'public', 'data', 'config', `system_${user.uid}`), (docSnap) => {
+                    if (docSnap.exists()) {
+                        setHomeSysConfig(docSnap.data());
+                    } else {
+                        setHomeSysConfig(null);
+                    }
+                }, (err) => console.error("Home config error:", err));
+                return () => unsub();
+            }, [user]);
+
             const handleGoogleLogin = async () => {
                 const provider = new GoogleAuthProvider();
                 try { await signInWithPopup(auth, provider); } 
@@ -384,8 +397,19 @@
                         {view === 'home' && (
                             <div className="flex flex-col items-center justify-center min-h-[85vh] p-6 print-hide">
                                 <div className="text-center mb-10 space-y-2">
-                                    <h1 className="text-3xl sm:text-4xl font-extrabold text-blue-900 tracking-tight">經費領據管理系統</h1>
-                                    <p className="text-gray-500">歡迎, {user.displayName || user.email}</p>
+                                    {/* 🔥 動態判斷：如果有抓到單位名稱，就顯示專屬標題 */}
+                                    {homeSysConfig ? (
+                                        <>
+                                            <h1 className="text-3xl sm:text-4xl font-extrabold text-blue-600 tracking-tight">{homeSysConfig.schoolName} {homeSysConfig.deptName}</h1>
+                                            <h1 className="text-2xl sm:text-3xl font-extrabold text-blue-900 tracking-tight mt-2">專屬領據管理後台</h1>
+                                            <p className="text-gray-500 mt-2">管理員：{user.displayName || user.email}</p>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <h1 className="text-3xl sm:text-4xl font-extrabold text-blue-900 tracking-tight">經費領據管理系統</h1>
+                                            <p className="text-gray-500">歡迎, {user.displayName || user.email}</p>
+                                        </>
+                                    )}
                                 </div>
                                 <div className="flex flex-col sm:flex-row gap-8 w-full max-w-2xl">
                                     <div className="flex-1 bg-white border-2 border-gray-200 text-gray-400 p-10 rounded-2xl flex flex-col items-center text-center">
@@ -396,16 +420,16 @@
                                     <button onClick={goAdmin} className="flex-1 bg-white border-2 border-blue-600 text-blue-800 p-10 rounded-2xl shadow-xl hover:shadow-2xl hover:bg-blue-50 transition-all duration-300 flex flex-col items-center group">
                                         <span className="text-5xl mb-4 group-hover:scale-110 transition-transform">⚙️</span>
                                         <span className="text-2xl font-bold">行政管理員</span>
-                                        <span className="text-sm mt-3 text-gray-500">建立與管理我的專屬表單</span>
+                                        {/* 按鈕文字也會跟著動態改變 */}
+                                        <span className="text-sm mt-3 text-gray-500">{homeSysConfig ? '進入我的管理後台' : '建立與管理我的專屬表單'}</span>
                                     </button>
                                 </div>
                                 <button onClick={handleLogout} className="mt-10 text-gray-400 hover:text-red-500 underline font-bold">登出 Google 帳號</button>
                             </div>
                         )}
                         
-                        {view === 'admin' && <AdminView setView={setView} user={user} dynamicAppId={dynamicAppId} showToast={showToast} handleLogout={handleLogout} />}
-                        {view === 'instructor' && <InstructorView setView={setView} user={user} dynamicAppId={dynamicAppId} targetAdminId={targetAdminId} showToast={showToast} />}
-                        {view === 'receipt' && <ReceiptView setView={setView} />} // Placeholder, will pass props inside Admin
+                        {view === 'admin' && <AdminView setView={setView} user={user} appId={MY_PROJECT_ID} targetAdminId={targetAdminId} showToast={showToast} handleLogout={handleLogout} />}
+                        {view === 'instructor' && <InstructorView setView={setView} user={user} appId={MY_PROJECT_ID} targetAdminId={targetAdminId} showToast={showToast} />}
                     </div>
                     <div className="text-center text-gray-400 text-sm py-4 print-hide font-bold">@2026 Master</div>
                     <Toast message={toastMsg} onClose={() => setToastMsg('')} />
@@ -416,7 +440,8 @@
         // ==========================================
         // 講師填寫畫面
         // ==========================================
-        function InstructorView({ setView, user, dynamicAppId, targetAdminId, showToast }) {
+        function InstructorView({ setView, user, appId, targetAdminId, showToast }) {
+            const channelId = targetAdminId || 'default';
             const today = new Date().toISOString().split('T')[0];
             const [config, setConfig] = useState({ activityName: "載入中...", schoolName: "載入中...", year: "115", month: "05", day: "12", items: [] });
             const [sysConfig, setSysConfig] = useState({ schoolName: '載入中...', deptName: '' });
@@ -433,17 +458,28 @@
             const [isSubmitting, setIsSubmitting] = useState(false);
 
             useEffect(() => {
-                const unsubConfig = onSnapshot(doc(db, 'artifacts', dynamicAppId, 'public', 'data', 'config', 'current'), (docSnap) => {
+                if (!user) return; // 權限防護
+
+                const unsubConfig = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', `current_${channelId}`), (docSnap) => {
                     if (docSnap.exists()) setConfig(docSnap.data());
-                });
-                const unsubSys = onSnapshot(doc(db, 'artifacts', dynamicAppId, 'public', 'data', 'config', 'system'), (docSnap) => {
+                }, (err) => console.error("config snapshot error:", err));
+                
+                const unsubSys = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', `system_${channelId}`), (docSnap) => {
                     if (docSnap.exists()) setSysConfig(docSnap.data());
-                });
-                const unsubAuth = onSnapshot(doc(db, 'artifacts', dynamicAppId, 'public', 'data', 'config', 'auth'), (docSnap) => {
+                }, (err) => console.error("system snapshot error:", err));
+                
+                const unsubAuth = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', `auth_${channelId}`), (docSnap) => {
                     if (docSnap.exists()) setAuthConfig({ publicKey: docSnap.data().publicKey || null });
-                });
+                }, (err) => console.error("auth snapshot error:", err));
+                
                 return () => { unsubConfig(); unsubSys(); unsubAuth(); };
-            }, [dynamicAppId]);
+            }, [appId, channelId, user]);
+
+            useEffect(() => {
+                if (isSignModalOpen) document.body.style.overflow = 'hidden';
+                else document.body.style.overflow = '';
+                return () => { document.body.style.overflow = ''; };
+            }, [isSignModalOpen]);
 
             useEffect(() => {
                 if (!isSignModalOpen || !canvasRef.current) return;
@@ -491,7 +527,7 @@
                     encryptor.setPublicKey(authConfig.publicKey);
                     const encryptedSessionKey = encryptor.encrypt(sessionKey);
                     
-                    await addDoc(collection(db, 'artifacts', dynamicAppId, 'public', 'data', 'instructors'), { 
+                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', `instructors_${channelId}`), { 
                         name: formData.name, payload: encryptedPayload, e2eeKey: encryptedSessionKey, createdAt: Date.now(), userId: user.uid 
                     });
                     showToast('🔒 您的資料已完成自動加密並成功傳送給承辦人！');
@@ -634,7 +670,8 @@
         // 管理員儀表板 (已移除密碼，全自動隔離)
         // ==========================================
         function AdminView(props) {
-            const { setView, user, dynamicAppId, showToast, handleLogout } = props;
+            const { setView, user, appId, targetAdminId, showToast, handleLogout } = props;
+            const channelId = targetAdminId || 'default';
             const today = new Date().toISOString().split('T')[0];
             
             // 資料狀態
@@ -666,29 +703,36 @@
 
             // --- 資料讀取與金鑰解密 ---
             useEffect(() => {
-                const unsubConfig = onSnapshot(doc(db, 'artifacts', dynamicAppId, 'public', 'data', 'config', 'current'), (docSnap) => {
+                if (!user) return; // 權限防護
+
+                const unsubConfig = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', `current_${channelId}`), (docSnap) => {
                     if (docSnap.exists()) {
                         let data = docSnap.data();
                         if (!data.items && data.itemName) data.items = [{ itemName: data.itemName, itemDate: today, startTime: "11:00", endTime: "13:00", qty: data.qty, price: data.price, remark: "" }];
                         setConfig(data);
                     }
-                });
-                const unsubSys = onSnapshot(doc(db, 'artifacts', dynamicAppId, 'public', 'data', 'config', 'system'), (docSnap) => {
+                }, (err) => console.error("config snapshot error:", err));
+                
+                const unsubSys = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', `system_${channelId}`), (docSnap) => {
                     if (docSnap.exists()) setSysConfig(docSnap.data());
-                });
-                const unsubOptions = onSnapshot(doc(db, 'artifacts', dynamicAppId, 'public', 'data', 'config', 'options'), (docSnap) => {
+                }, (err) => console.error("system snapshot error:", err));
+                
+                const unsubOptions = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', `options_${channelId}`), (docSnap) => {
                     if (docSnap.exists() && docSnap.data().itemNames) setItemOptions(docSnap.data().itemNames);
-                });
-                const unsubAuth = onSnapshot(doc(db, 'artifacts', dynamicAppId, 'public', 'data', 'config', 'auth'), (docSnap) => {
+                }, (err) => console.error("options snapshot error:", err));
+                
+                const unsubAuth = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', `auth_${channelId}`), (docSnap) => {
                     if (docSnap.exists()) setAuthConfig(docSnap.data());
-                });
-                const unsubInstructors = onSnapshot(collection(db, 'artifacts', dynamicAppId, 'public', 'data', 'instructors'), (snapshot) => {
+                }, (err) => console.error("auth snapshot error:", err));
+                
+                const unsubInstructors = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', `instructors_${channelId}`), (snapshot) => {
                     const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     list.sort((a, b) => b.createdAt - a.createdAt);
                     setInstructorsRaw(list);
-                });
+                }, (err) => console.error("instructors snapshot error:", err));
+                
                 return () => { unsubConfig(); unsubSys(); unsubOptions(); unsubAuth(); unsubInstructors(); };
-            }, [dynamicAppId, today]);
+            }, [appId, channelId, today, user]);
 
             // 自動解密專屬私鑰 (無密碼版，使用 Google UID 作為對稱解密鑰匙)
             useEffect(() => {
@@ -730,6 +774,7 @@
 
             // --- 自動產生 RSA 金鑰 (完全透明化) ---
             useEffect(() => {
+                if (!user) return; // 權限防護
                 // 如果讀取完畢發現沒有公鑰，自動在背景產生並鎖入 Google UID
                 if (authConfig && authConfig.publicKey === undefined) return; // Wait for initial load
                 if (authConfig.publicKey === null && !isGenerating) {
@@ -742,7 +787,7 @@
                             const privKey = crypt.getPrivateKey();
                             // 用 Google UID 加密私鑰儲存在雲端，確保只有該帳號登入才能解鎖
                             const encPrivKey = window.CryptoJS.AES.encrypt(privKey, user.uid).toString();
-                            await setDoc(doc(db, 'artifacts', dynamicAppId, 'public', 'data', 'config', 'auth'), { 
+                            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', `auth_${channelId}`), { 
                                 publicKey: pubKey, encryptedPrivateKey: encPrivKey 
                             }, { merge: true });
                             setAdminKey(privKey);
@@ -750,7 +795,7 @@
                         finally { setIsGenerating(false); }
                     }, 500);
                 }
-            }, [authConfig.publicKey, isGenerating, dynamicAppId, user.uid]);
+            }, [authConfig.publicKey, isGenerating, appId, channelId, user]);
 
             if (viewMode === 'receipt') {
                 return <ReceiptView setView={() => setViewMode('dashboard')} config={config} instructors={selectedInstructors} showToast={showToast} sysConfig={sysConfig} />;
@@ -771,11 +816,11 @@
             // --- 管理員操作功能 ---
             const saveConfig = async (newConfig) => {
                 try {
-                    await setDoc(doc(db, 'artifacts', dynamicAppId, 'public', 'data', 'config', 'current'), newConfig);
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', `current_${channelId}`), newConfig);
                     const currentItemNames = newConfig.items.map(i => i.itemName).filter(Boolean);
                     const newOptions = Array.from(new Set([...itemOptions, ...currentItemNames]));
                     if (newOptions.length > itemOptions.length) {
-                        await setDoc(doc(db, 'artifacts', dynamicAppId, 'public', 'data', 'config', 'options'), { itemNames: newOptions }, { merge: true });
+                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', `options_${channelId}`), { itemNames: newOptions }, { merge: true });
                     }
                     showToast('💾 活動設定已更新成功！');
                 } catch (err) { showToast('儲存失敗'); }
@@ -783,16 +828,22 @@
 
             const handleUpdateSysConfig = async () => {
                 try {
-                    await setDoc(doc(db, 'artifacts', dynamicAppId, 'public', 'data', 'config', 'system'), sysConfig);
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', `system_${channelId}`), sysConfig);
                     showToast('✅ 系統名稱已成功更新！');
                 } catch (e) { showToast('系統設定存檔失敗'); }
             };
 
             const handleCopyShareLink = () => {
-                const shareUrl = window.location.origin + window.location.pathname + '#' + user.uid;
-                const el = document.createElement('textarea'); el.value = shareUrl; document.body.appendChild(el);
-                el.select(); document.execCommand('copy'); document.body.removeChild(el);
-                showToast("📋 已複製！請將連結傳給講師，他們會自動被導引到您的頻道填寫。");
+                const baseUrl = window.location.href.split('#')[0];
+                const shareUrl = baseUrl + '#' + user.uid;
+                const el = document.createElement('textarea'); el.value = shareUrl; 
+                el.setAttribute('readonly', ''); el.style.position = 'absolute'; el.style.left = '-9999px';
+                document.body.appendChild(el); el.select(); el.setSelectionRange(0, 99999);
+                try {
+                    if (document.execCommand('copy')) showToast("📋 已複製！請將連結傳給講師，他們會自動被導引到您的頻道填寫。");
+                    else throw new Error('Failed');
+                } catch (err) { prompt("您的瀏覽器阻擋自動複製，請手動複製網址：", shareUrl); }
+                document.body.removeChild(el);
             };
 
             const handleSelectAll = () => {
@@ -821,7 +872,7 @@
 
             const handleClearAllData = async () => {
                 try {
-                    const deletePromises = instructorsRaw.map(inst => deleteDoc(doc(db, 'artifacts', dynamicAppId, 'public', 'data', 'instructors', inst.id)));
+                    const deletePromises = instructorsRaw.map(inst => deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', `instructors_${channelId}`, inst.id)));
                     await Promise.all(deletePromises);
                     showToast('✅ 所有講師資料已清空。'); setIsClearModalOpen(false); setSelectedIds(new Set()); 
                 } catch (error) { showToast('清空失敗。'); }
@@ -830,7 +881,7 @@
             const handleConfirmSingleDelete = async () => {
                 if (!deleteConfirmId) return;
                 try {
-                    await deleteDoc(doc(db, 'artifacts', dynamicAppId, 'public', 'data', 'instructors', deleteConfirmId));
+                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', `instructors_${channelId}`, deleteConfirmId));
                     showToast('✅ 已刪除。');
                     if (selectedIds.has(deleteConfirmId)) { const newSet = new Set(selectedIds); newSet.delete(deleteConfirmId); setSelectedIds(newSet); }
                 } catch (error) { showToast('刪除失敗。'); }
@@ -845,7 +896,7 @@
                     const encryptor = new window.JSEncrypt(); encryptor.setPublicKey(authConfig.publicKey);
                     const encryptedSessionKey = encryptor.encrypt(sessionKey);
 
-                    await addDoc(collection(db, 'artifacts', dynamicAppId, 'public', 'data', 'instructors'), { 
+                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', `instructors_${channelId}`), { 
                         name: addFormData.name, payload: encryptedPayload, e2eeKey: encryptedSessionKey, createdAt: Date.now(), userId: user.uid
                     });
                     showToast('✅ 資料已建檔加密'); setIsAddModalOpen(false);
@@ -867,9 +918,90 @@
                     const encryptor = new window.JSEncrypt(); encryptor.setPublicKey(authConfig.publicKey);
                     const newEncryptedSessionKey = encryptor.encrypt(sessionKey);
 
-                    await setDoc(doc(db, 'artifacts', dynamicAppId, 'public', 'data', 'instructors', instructorId), { payload: newEncryptedPayload, e2eeKey: newEncryptedSessionKey }, { merge: true });
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `instructors_${channelId}`, instructorId), { payload: newEncryptedPayload, e2eeKey: newEncryptedSessionKey }, { merge: true });
                     showToast('✅ 更新成功！');
                 } catch (err) { showToast('上傳失敗'); }
+                e.target.value = '';
+            };
+
+            const handleDownloadTemplate = () => {
+                if (!window.XLSX || !window.saveAs) { showToast("套件載入中..."); return; }
+                try {
+                    const templateData = [{
+                        '姓名': '王大明 (必填)',
+                        '身分證': 'A123456789',
+                        '地址': '基隆市安樂區...',
+                        '電話': '0912-345-678',
+                        '銀行': '台灣銀行 (郵局請直接填寫郵局)',
+                        '帳號': '123456789012'
+                    }];
+                    const sheet = window.XLSX.utils.json_to_sheet(templateData);
+                    sheet['!cols'] = [{wch: 15}, {wch: 15}, {wch: 30}, {wch: 15}, {wch: 25}, {wch: 20}];
+
+                    const wb = window.XLSX.utils.book_new();
+                    window.XLSX.utils.book_append_sheet(wb, sheet, "匯入範本");
+                    
+                    const excelBuffer = window.XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+                    const data = new Blob([excelBuffer], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+                    window.saveAs(data, '講師資料匯入範本.xlsx');
+                    showToast('✅ 範本下載成功！請依照格式填寫後匯入。');
+                } catch (e) { showToast('❌ 範本下載失敗'); }
+            };
+
+            const handleImportExcel = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                if (!window.XLSX) { showToast('❌ Excel 套件尚未載入，請稍候再試。'); e.target.value = ''; return; }
+                if (!user || !authConfig.publicKey || !adminKey) { showToast('❌ 請先完成系統連線與安全初始化！'); e.target.value = ''; return; }
+
+                showToast('檔案解析中...');
+                const reader = new FileReader();
+                reader.onload = async (evt) => {
+                    try {
+                        const dataBuffer = evt.target.result;
+                        const wb = window.XLSX.read(dataBuffer, { type: 'array' });
+                        const wsname = wb.SheetNames[0];
+                        const ws = wb.Sheets[wsname];
+                        const data = window.XLSX.utils.sheet_to_json(ws);
+
+                        let count = 0;
+                        for (let row of data) {
+                            const name = String(row['姓名'] || row['Name'] || row['name'] || '').trim();
+                            if (!name || name.includes('(必填)')) continue; 
+                            
+                            const idNumber = String(row['身分證'] || row['身分證字號'] || '').trim();
+                            const address = String(row['地址'] || row['戶籍地址'] || '').trim();
+                            const phone = String(row['電話'] || row['聯絡電話'] || '').trim();
+                            const bankRaw = String(row['銀行'] || row['銀行名稱'] || '').trim();
+                            const accRaw = String(row['帳號'] || row['銀行帳號'] || '').trim();
+                            
+                            let bankType = 'other', bankName = '', bankAccount = '', postOffice = '', postAccount = '';
+                            if (bankRaw.includes('郵局')) { bankType = 'post'; postAccount = accRaw; } 
+                            else if (bankRaw) { bankType = 'bank'; bankName = bankRaw; bankAccount = accRaw; }
+
+                            const newInst = { name, idNumber, address, phone, bankType, bankName, bankAccount, postOffice, postAccount, signatureUrl: null, passbookUrl: null };
+                            
+                            const sessionKey = generateRandomKey();
+                            const encryptedPayload = window.CryptoJS.AES.encrypt(JSON.stringify(newInst), sessionKey).toString();
+                            const encryptor = new window.JSEncrypt();
+                            encryptor.setPublicKey(authConfig.publicKey);
+                            const encryptedSessionKey = encryptor.encrypt(sessionKey);
+
+                            const docId = `${user.uid}_import_${Date.now()}_${count}`;
+                            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `instructors_${channelId}`, docId), { 
+                                name, payload: encryptedPayload, e2eeKey: encryptedSessionKey, createdAt: Date.now(), userId: user.uid 
+                            });
+                            count++;
+                        }
+                        
+                        if (count > 0) showToast(`✅ 成功匯入 ${count} 筆講師資料並完成自動加密！`);
+                        else showToast('⚠️ 未匯入任何資料，請確認工作表內容是否符合範本格式。');
+                    } catch (err) {
+                        console.error("Excel import error:", err);
+                        showToast('❌ 匯入失敗，請確認檔案格式是否正確。');
+                    }
+                };
+                reader.readAsArrayBuffer(file);
                 e.target.value = '';
             };
 
@@ -987,6 +1119,11 @@
                             <div className="flex flex-wrap gap-2 w-full xl:w-auto">
                                 <button onClick={() => { setView('home'); window.location.hash=''; }} className="flex-1 sm:flex-none bg-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-300">🏠 首頁</button>
                                 <button onClick={handleCopyShareLink} className="flex-1 sm:flex-none bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-indigo-700 animate-pulse">🔗 複製專屬講師連結</button>
+                                <button onClick={handleDownloadTemplate} className="flex-1 sm:flex-none bg-cyan-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-cyan-700 transition-colors">📄 下載範本</button>
+                                <label className="flex-1 sm:flex-none bg-teal-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-teal-700 transition-colors cursor-pointer text-center flex items-center justify-center">
+                                    📥 匯入Excel
+                                    <input type="file" accept=".xlsx, .xls, .csv" className="hidden" onChange={handleImportExcel} />
+                                </label>
                                 <button onClick={() => setIsAddModalOpen(true)} className="flex-1 sm:flex-none bg-green-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-green-700">+ 新增</button>
                                 <button onClick={handleBatchDownload} className="flex-1 sm:flex-none bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-orange-600">📥 匯出清單/圖片</button>
                                 <button onClick={() => setIsClearModalOpen(true)} className="flex-1 sm:flex-none bg-red-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-red-700">🗑️ 清空</button>

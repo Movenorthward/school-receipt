@@ -2,14 +2,16 @@
 <html lang="zh-TW">
 <!-- 
   =============================================================
-  🏷️ 版本代號：V4-浮空簽名去背版 (Master2026-Secure-V4)
+  🏷️ 版本代號：V8-完整修正版
   
   【核心更新紀錄】
-  1. 簽名檔自動去背：改用真正的透明背景 (image/png) 消除列印白塊。
-  2. 浮空簽名定位：簽名圖片採絕對定位，放大也不會撐破領據表格。
-  3. 直覺式拖曳排版：點擊簽名即可彈出調整視窗，支援拖曳與縮放。
-  4. 記憶路由防呆：加入 Session 暫存，解決手機跳轉登入後遺失代碼的 Bug。
-  5. PDF 直出引擎：列印採用隱形 A4 畫布轉換，確保 100% 絕對不跑版。
+  1. 原生透明修復：移除 mixBlendMode，徹底解決 PDF 列印出現白底方塊的問題。
+  2. 簽名檔自動去背：改用真正的透明背景 (image/png) 消除列印白塊。
+  3. 浮空簽名定位：簽名圖片採絕對定位，放大也不會撐破領據表格。
+  4. 直覺式拖曳排版：點擊簽名即可彈出調整視窗，支援拖曳與縮放。
+  5. 記憶路由防呆：加入 Session 暫存，解決手機跳轉登入後遺失代碼的 Bug。
+  6. PDF 直出引擎：列印採用隱形 A4 畫布轉換，確保 100% 絕對不跑版。
+  7. 管理員識別列：加入頂端包含 Google 頭像與安全頻道的專屬導覽列。
   =============================================================
 -->
 <head>
@@ -17,7 +19,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- 基礎 XSS 防護 -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: wss: data: blob:;">
-    <title>經費領據管理系統 (V4-浮空簽名去背版)</title>
+    <title>經費領據管理系統 (V8-完整修正版)</title>
     
     <!-- 載入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -48,7 +50,7 @@
         // ⚠️ 請在此處填入您的 Firebase 設定
         // ==========================================
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-           apiKey: "AIzaSyAeJVFba8QO4jY7-FiYZ7AwFqAnLSSOpes",
+          apiKey: "AIzaSyAeJVFba8QO4jY7-FiYZ7AwFqAnLSSOpes",
   authDomain: "schoolreceipt.firebaseapp.com",
   databaseURL: "https://schoolreceipt-default-rtdb.firebaseio.com",
   projectId: "schoolreceipt",
@@ -232,7 +234,6 @@
                                 <div style={{ display: 'flex', alignItems: 'center', height: '100%', padding: '0 10px', position: 'relative' }}>
                                     <span style={{ fontSize: '1.25rem', fontWeight: 'bold', zIndex: 10 }}>{instructor.name}</span>
                                     <div style={{ position: 'absolute', left: `${transform.x}px`, top: `${transform.y}px`, width: `${transform.width}px`, zIndex: 50, touchAction: 'none' }}>
-                                        {/* 🔥 移除導致 PDF 引擎誤判白底的 mixBlendMode */}
                                         <img src={instructor.signatureUrl} alt="Signature" style={{ width: '100%', height: 'auto', cursor: 'move', border: '2px dashed #93c5fd', backgroundColor: 'rgba(219, 234, 254, 0.4)' }} onPointerDown={handleDragStart} onPointerMove={handleDragMove} onPointerUp={handleDragEnd} onPointerCancel={handleDragEnd} draggable="false" />
                                         <div style={{ position: 'absolute', right: '-10px', bottom: '-10px', width: '24px', height: '24px', backgroundColor: '#2563eb', borderRadius: '50%', cursor: 'se-resize', boxShadow: '0 2px 4px rgba(0,0,0,0.3)', border: '2px solid white' }} onPointerDown={handleResizeStart} onPointerMove={handleResizeMove} onPointerUp={handleResizeEnd} onPointerCancel={handleResizeEnd} title="拖曳我來縮放簽名" />
                                     </div>
@@ -379,7 +380,7 @@
                 return targetAdminId ? `${baseId}-${targetAdminId}` : baseId;
             }, [targetAdminId]);
 
-            // 1. 初始化資源與 Firebase Auth (🔥 修復：加入強制載入成功與 Canvas 測試網域繞過登入)
+            // 1. 初始化資源與 Firebase Auth 
             useEffect(() => {
                 const loadScripts = async () => {
                     const scripts = [
@@ -399,7 +400,6 @@
                                 script.src = s.src;
                                 script.crossOrigin = "anonymous";
                                 script.onload = resolve;
-                                // 防呆：如果網路擋住套件，不要讓畫面永遠轉圈圈
                                 script.onerror = () => { console.warn('載入延遲:', s.src); resolve(); };
                                 document.body.appendChild(script);
                             });
@@ -409,7 +409,6 @@
                 };
                 loadScripts();
 
-                // 🔥 嚴格的 Canvas 自動通關：確保測試環境抓到 Token 自動晉升管理員
                 const initAuth = async () => {
                     try {
                         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
@@ -493,7 +492,6 @@
                         }
                     }
                 } else {
-                    // 🔥 修復：Canvas 自動獲取 Token 後，會直接來到這一步，秒進後台！
                     sessionStorage.setItem('receipt_channel', user.uid);
                     setTargetAdminId(user.uid);
                     setView('admin');
@@ -504,7 +502,6 @@
                 if (targetAdminId) {
                     setView('instructor');
                 } else {
-                    // 🔥 修復：將 alert() 換成 showToast，防止 Canvas 安全機制鎖死畫面
                     showToast("💡 講師請點擊承辦人的專屬網址。承辦人請先點擊『行政管理員』！");
                 }
             };
@@ -571,7 +568,7 @@
                         {view === 'admin' && <AdminView setView={setView} user={user} appId={MY_PROJECT_ID} targetAdminId={targetAdminId} showToast={showToast} />}
                         {view === 'instructor' && <InstructorView setView={setView} user={user} appId={MY_PROJECT_ID} targetAdminId={targetAdminId} showToast={showToast} />}
                     </div>
-                    <div className="text-center text-gray-400 text-sm py-4 print-hide font-bold">@2026 Master (版本：V6)</div>
+                    <div className="text-center text-gray-400 text-sm py-4 print-hide font-bold">@2026 Master (版本：V8)</div>
                     <Toast message={toastMsg} onClose={() => setToastMsg('')} />
                 </div>
             );
@@ -628,7 +625,6 @@
                     const ctx = canvasEl.getContext('2d');
                     const rect = canvasEl.parentElement.getBoundingClientRect();
                     canvasEl.width = rect.width; canvasEl.height = rect.height;
-                    // 🔥 去背修正 1：不再填滿白色背景，改為清空畫布維持透明
                     ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
                     ctx.strokeStyle = '#000000'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
                 }, 100);
@@ -643,11 +639,7 @@
             const startDrawing = (e) => { setIsDrawing(true); const pos = getPos(e); canvasRef.current.getContext('2d').beginPath(); canvasRef.current.getContext('2d').moveTo(pos.x, pos.y); };
             const draw = (e) => { if (!isDrawing) return; const pos = getPos(e); canvasRef.current.getContext('2d').lineTo(pos.x, pos.y); canvasRef.current.getContext('2d').stroke(); };
             const stopDrawing = () => { if (isDrawing) { canvasRef.current.getContext('2d').closePath(); setIsDrawing(false); } };
-            
-            // 🔥 去背修正 2：按下清除按鈕時，一樣使用 clearRect 保持透明
             const clearSignature = () => { const ctx = canvasRef.current.getContext('2d'); ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height); setSignatureUrl(null); };
-            
-            // 🔥 去背修正 3：輸出圖檔格式從 jpeg (不支援透明) 改為 png (原生支援透明)
             const confirmSignature = () => { setSignatureUrl(canvasRef.current.toDataURL('image/png')); setIsSignModalOpen(false); };
 
             const handlePhotoUpload = async (e) => {
@@ -991,7 +983,6 @@
                 } catch (e) { showToast('系統設定存檔失敗'); }
             };
 
-            // 🔥 修復：安全複製網址，避免使用 prompt 被安全攔截
             const handleCopyShareLink = () => {
                 const baseUrl = window.location.href.split('#')[0];
                 const shareUrl = baseUrl + '#' + user.uid;
@@ -1217,12 +1208,21 @@
 
             const createImagePDF = async () => {
                 const tempContainer = document.createElement('div');
-                tempContainer.style.position = 'absolute'; tempContainer.style.top = '-9999px'; tempContainer.style.left = '0';
-                tempContainer.style.width = '210mm'; tempContainer.style.height = '297mm'; tempContainer.style.background = 'white';
+                tempContainer.style.position = 'absolute';
+                tempContainer.style.top = '-9999px';
+                tempContainer.style.left = '0';
+                tempContainer.style.width = '210mm';
+                tempContainer.style.height = '297mm';
+                tempContainer.style.background = 'white';
                 const originalElement = document.getElementById('image-print-root');
                 const clonedNode = originalElement.cloneNode(true);
-                clonedNode.style.width = '100%'; clonedNode.style.height = '100%'; clonedNode.style.minWidth = '100%'; clonedNode.style.minHeight = '100%'; clonedNode.style.boxShadow = 'none';
-                tempContainer.appendChild(clonedNode); document.body.appendChild(tempContainer);
+                clonedNode.style.width = '100%';
+                clonedNode.style.height = '100%';
+                clonedNode.style.minWidth = '100%';
+                clonedNode.style.minHeight = '100%';
+                clonedNode.style.boxShadow = 'none';
+                tempContainer.appendChild(clonedNode);
+                document.body.appendChild(tempContainer);
 
                 const pdf = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
                 try {
@@ -1239,122 +1239,150 @@
             };
 
             return (
-                <div className="max-w-7xl mx-auto my-8 p-4 flex gap-6 flex-col lg:flex-row print-hide">
-                    <div className="w-full lg:w-1/3 space-y-6">
-                        <div className="bg-white p-6 rounded-2xl shadow-xl border-t-8 border-purple-600">
-                            <h2 className="text-xl font-bold mb-4 text-purple-900">🏢 發放單位設定</h2>
-                            <div className="space-y-4">
-                                <div><label className="text-xs font-bold text-gray-400">學校/單位全銜</label><input type="text" className="w-full p-2 border rounded-lg bg-gray-50" value={sysConfig.schoolName} onChange={e => setSysConfig({...sysConfig, schoolName: e.target.value})} /></div>
-                                <div><label className="text-xs font-bold text-gray-400">管理組別/處室名稱</label><input type="text" className="w-full p-2 border rounded-lg bg-gray-50" value={sysConfig.deptName} onChange={e => setSysConfig({...sysConfig, deptName: e.target.value})} /></div>
-                                <button onClick={handleUpdateSysConfig} className="w-full py-2 bg-purple-600 text-white rounded-xl font-bold text-sm hover:bg-purple-700 shadow-md">套用單位名稱</button>
-                            </div>
-                        </div>
-
-                        <div className="bg-white p-6 rounded-2xl shadow-xl border-t-8 border-blue-600">
-                            <h2 className="text-xl font-bold mb-4 text-gray-800 border-b pb-2">1. 領據金額設定</h2>
-                            <div className="space-y-4 text-sm">
-                                <div><label className="text-xs font-bold text-gray-400">款項用途/說明</label><input type="text" className="w-full p-2 border rounded-lg bg-gray-50" value={config.activityName} onChange={e => setConfig({...config, activityName: e.target.value})} /></div>
-                                <div><label className="text-xs font-bold text-gray-400">領據支付單位 (此致)</label><input type="text" className="w-full p-2 border rounded-lg bg-gray-50" value={config.schoolName} onChange={e => setConfig({...config, schoolName: e.target.value})} /></div>
-                                <div className="flex gap-2">
-                                    <div className="flex-1"><label className="block text-center text-[10px] text-gray-400">民國年</label><input type="text" className="w-full p-2 border rounded-lg text-center" value={config.year} onChange={e => setConfig({...config, year: e.target.value})} /></div>
-                                    <div className="flex-1"><label className="block text-center text-[10px] text-gray-400">月</label><input type="text" className="w-full p-2 border rounded-lg text-center" value={config.month} onChange={e => setConfig({...config, month: e.target.value})} /></div>
-                                    <div className="flex-1"><label className="block text-center text-[10px] text-gray-400">日</label><input type="text" className="w-full p-2 border rounded-lg text-center" value={config.day} onChange={e => setConfig({...config, day: e.target.value})} /></div>
-                                </div>
-                                <div className="border-t pt-4 mt-6">
-                                    <div className="flex justify-between items-center mb-4 text-xs font-bold">明細清單 <button onClick={addItem} className="text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">+ 新增一行</button></div>
-                                    {config.items.map((item, idx) => (
-                                        <div key={idx} className="border border-gray-100 p-3 mb-4 rounded-xl bg-gray-50 relative shadow-inner">
-                                            <button onClick={() => removeItem(idx)} className="absolute -top-2 -right-2 bg-white text-red-500 rounded-full shadow w-6 h-6 border flex items-center justify-center">✕</button>
-                                            <div className="grid grid-cols-2 gap-2 mb-2">
-                                                <input list="item-list" className="p-2 border rounded-lg text-xs" placeholder="項目" value={item.itemName} onChange={e => updateItem(idx, 'itemName', e.target.value)} />
-                                                <input type="date" className="p-2 border rounded-lg text-xs" value={item.itemDate} onChange={e => updateItem(idx, 'itemDate', e.target.value)} />
-                                            </div>
-                                            <div className="flex gap-1 mb-2">
-                                                <input type="time" className="flex-1 p-2 border rounded-lg text-xs" value={item.startTime} onChange={e => updateItem(idx, 'startTime', e.target.value)} />
-                                                <input type="time" className="flex-1 p-2 border rounded-lg text-xs" value={item.endTime} onChange={e => updateItem(idx, 'endTime', e.target.value)} />
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-2 mb-2">
-                                                <div className="flex items-center gap-1 border rounded-lg p-1 bg-white"><span className="text-[10px] text-gray-400">節:</span><input type="number" className="w-full outline-none text-xs" value={item.qty} onChange={e => updateItem(idx, 'qty', Number(e.target.value))} /></div>
-                                                <div className="flex items-center gap-1 border rounded-lg p-1 bg-white"><span className="text-[10px] text-gray-400">$:</span><input type="number" className="w-full outline-none text-xs" value={item.price} onChange={e => updateItem(idx, 'price', Number(e.target.value))} /></div>
-                                            </div>
-                                            <input type="text" className="w-full p-2 border rounded-lg text-[10px] bg-white" placeholder="單筆備註..." value={item.remark || ''} onChange={e => updateItem(idx, 'remark', e.target.value)} />
-                                        </div>
-                                    ))}
-                                    <datalist id="item-list">{itemOptions.map(o => <option key={o} value={o} />)}</datalist>
-                                    <div className="p-4 bg-blue-900 rounded-xl text-center font-bold text-white mb-4">總金額：{grandTotal.toLocaleString()} 元</div>
-                                </div>
-                                <button onClick={() => saveConfig(config)} className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 shadow-lg active:scale-95">💾 儲存活動設定</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="w-full lg:w-2/3 bg-white p-8 rounded-2xl shadow-xl border-t-8 border-green-600 h-fit">
-                        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 gap-4 border-b border-gray-100 pb-4">
+                <div className="max-w-7xl mx-auto my-4 sm:my-8 p-4 flex flex-col gap-6 print-hide">
+                    
+                    {/* 🔥 新增：管理員專屬身分識別列 (顯示 Google 頭貼與帳號) */}
+                    <div className="bg-white rounded-2xl shadow-md p-4 px-6 flex justify-between items-center border-l-8 border-indigo-500 flex-wrap gap-4">
+                        <div className="flex items-center gap-3">
+                            <span className="text-3xl hidden sm:block">🛡️</span>
                             <div>
-                                <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">2. 講師歷史清單</h2>
-                                <p className="text-xs text-green-600 font-extrabold mt-1">✓ 本機安全自動解密中</p>
-                            </div>
-                            <div className="flex flex-wrap gap-2 w-full xl:w-auto">
-                                <button onClick={() => { window.location.hash=''; sessionStorage.removeItem('receipt_channel'); setView('home'); }} className="flex-1 sm:flex-none bg-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-300">🏠 首頁</button>
-                                <button onClick={handleCopyShareLink} className="flex-1 sm:flex-none bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-indigo-700 animate-pulse">🔗 複製專屬講師連結</button>
-                                <button onClick={handleDownloadTemplate} className="flex-1 sm:flex-none bg-cyan-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-cyan-700 transition-colors">📄 下載範本</button>
-                                <label className="flex-1 sm:flex-none bg-teal-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-teal-700 transition-colors cursor-pointer text-center flex items-center justify-center">
-                                    📥 匯入Excel
-                                    <input type="file" accept=".xlsx, .xls, .csv" className="hidden" onChange={handleImportExcel} />
-                                </label>
-                                <button onClick={() => setIsAddModalOpen(true)} className="flex-1 sm:flex-none bg-green-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-green-700">+ 新增</button>
-                                <button onClick={handleBatchDownload} className="flex-1 sm:flex-none bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-orange-600">📥 匯出清單/圖片</button>
-                                <button onClick={() => setIsClearModalOpen(true)} className="flex-1 sm:flex-none bg-red-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-red-700">🗑️ 清空</button>
-                                <button onClick={handleLogoutAdmin} className="flex-1 sm:flex-none bg-gray-800 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-gray-900">🚪 登出</button>
+                                <h1 className="text-xl font-bold text-indigo-900">專屬領據管理後台</h1>
+                                <p className="text-xs text-gray-500 font-mono mt-1">安全頻道：{user?.uid}</p>
                             </div>
                         </div>
-                        
-                        <div className="relative mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-                            <div className="relative w-full sm:flex-1">
-                                <span className="absolute left-3 top-3 text-gray-400">🔍</span>
-                                <input type="text" placeholder="搜尋講師..." className="w-full p-3 pl-10 border rounded-2xl bg-gray-50 focus:bg-white outline-none focus:ring-2 focus:ring-blue-500" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                        <div className="flex items-center gap-4 bg-gray-50 px-5 py-2 rounded-xl border border-gray-100">
+                            <div className="text-right hidden sm:block">
+                                <div className="text-sm font-bold text-gray-800">{user?.displayName || '系統管理員'}</div>
+                                <div className="text-xs text-gray-500">{user?.email}</div>
                             </div>
-                            <div className="flex items-center gap-3 w-full sm:w-auto">
-                                {selectedIds.size > 0 && <span className="text-sm font-bold text-blue-600 whitespace-nowrap">已勾選 {selectedIds.size} 筆</span>}
-                                <button onClick={handleBatchPrint} className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold shadow hover:bg-blue-700 flex justify-center items-center gap-2">🖨️ 批次排版列印</button>
+                            {user?.photoURL ? (
+                                <img src={user.photoURL} alt="Profile" className="w-10 h-10 rounded-full shadow-sm ring-2 ring-white" referrerPolicy="no-referrer" />
+                            ) : (
+                                <div className="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-sm ring-2 ring-white">
+                                    {(user?.displayName || user?.email || 'A').charAt(0).toUpperCase()}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* 🔥 將原本的左右兩欄用 flex 容器包裝起來 */}
+                    <div className="flex gap-6 flex-col lg:flex-row w-full">
+                        <div className="w-full lg:w-1/3 space-y-6">
+                            <div className="bg-white p-6 rounded-2xl shadow-xl border-t-8 border-purple-600">
+                                <h2 className="text-xl font-bold mb-4 text-purple-900">🏢 發放單位設定</h2>
+                                <div className="space-y-4">
+                                    <div><label className="text-xs font-bold text-gray-400">學校/單位全銜</label><input type="text" className="w-full p-2 border rounded-lg bg-gray-50" value={sysConfig.schoolName} onChange={e => setSysConfig({...sysConfig, schoolName: e.target.value})} /></div>
+                                    <div><label className="text-xs font-bold text-gray-400">管理組別/處室名稱</label><input type="text" className="w-full p-2 border rounded-lg bg-gray-50" value={sysConfig.deptName} onChange={e => setSysConfig({...sysConfig, deptName: e.target.value})} /></div>
+                                    <button onClick={handleUpdateSysConfig} className="w-full py-2 bg-purple-600 text-white rounded-xl font-bold text-sm hover:bg-purple-700 shadow-md">套用單位名稱</button>
+                                </div>
+                            </div>
+
+                            <div className="bg-white p-6 rounded-2xl shadow-xl border-t-8 border-blue-600">
+                                <h2 className="text-xl font-bold mb-4 text-gray-800 border-b pb-2">1. 領據金額設定</h2>
+                                <div className="space-y-4 text-sm">
+                                    <div><label className="text-xs font-bold text-gray-400">款項用途/說明</label><input type="text" className="w-full p-2 border rounded-lg bg-gray-50" value={config.activityName} onChange={e => setConfig({...config, activityName: e.target.value})} /></div>
+                                    <div><label className="text-xs font-bold text-gray-400">領據支付單位 (此致)</label><input type="text" className="w-full p-2 border rounded-lg bg-gray-50" value={config.schoolName} onChange={e => setConfig({...config, schoolName: e.target.value})} /></div>
+                                    <div className="flex gap-2">
+                                        <div className="flex-1"><label className="block text-center text-[10px] text-gray-400">民國年</label><input type="text" className="w-full p-2 border rounded-lg text-center" value={config.year} onChange={e => setConfig({...config, year: e.target.value})} /></div>
+                                        <div className="flex-1"><label className="block text-center text-[10px] text-gray-400">月</label><input type="text" className="w-full p-2 border rounded-lg text-center" value={config.month} onChange={e => setConfig({...config, month: e.target.value})} /></div>
+                                        <div className="flex-1"><label className="block text-center text-[10px] text-gray-400">日</label><input type="text" className="w-full p-2 border rounded-lg text-center" value={config.day} onChange={e => setConfig({...config, day: e.target.value})} /></div>
+                                    </div>
+                                    <div className="border-t pt-4 mt-6">
+                                        <div className="flex justify-between items-center mb-4 text-xs font-bold">明細清單 <button onClick={addItem} className="text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">+ 新增一行</button></div>
+                                        {config.items.map((item, idx) => (
+                                            <div key={idx} className="border border-gray-100 p-3 mb-4 rounded-xl bg-gray-50 relative shadow-inner">
+                                                <button onClick={() => removeItem(idx)} className="absolute -top-2 -right-2 bg-white text-red-500 rounded-full shadow w-6 h-6 border flex items-center justify-center">✕</button>
+                                                <div className="grid grid-cols-2 gap-2 mb-2">
+                                                    <input list="item-list" className="p-2 border rounded-lg text-xs" placeholder="項目" value={item.itemName} onChange={e => updateItem(idx, 'itemName', e.target.value)} />
+                                                    <input type="date" className="p-2 border rounded-lg text-xs" value={item.itemDate} onChange={e => updateItem(idx, 'itemDate', e.target.value)} />
+                                                </div>
+                                                <div className="flex gap-1 mb-2">
+                                                    <input type="time" className="flex-1 p-2 border rounded-lg text-xs" value={item.startTime} onChange={e => updateItem(idx, 'startTime', e.target.value)} />
+                                                    <input type="time" className="flex-1 p-2 border rounded-lg text-xs" value={item.endTime} onChange={e => updateItem(idx, 'endTime', e.target.value)} />
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-2 mb-2">
+                                                    <div className="flex items-center gap-1 border rounded-lg p-1 bg-white"><span className="text-[10px] text-gray-400">節:</span><input type="number" className="w-full outline-none text-xs" value={item.qty} onChange={e => updateItem(idx, 'qty', Number(e.target.value))} /></div>
+                                                    <div className="flex items-center gap-1 border rounded-lg p-1 bg-white"><span className="text-[10px] text-gray-400">$:</span><input type="number" className="w-full outline-none text-xs" value={item.price} onChange={e => updateItem(idx, 'price', Number(e.target.value))} /></div>
+                                                </div>
+                                                <input type="text" className="w-full p-2 border rounded-lg text-[10px] bg-white" placeholder="單筆備註..." value={item.remark || ''} onChange={e => updateItem(idx, 'remark', e.target.value)} />
+                                            </div>
+                                        ))}
+                                        <datalist id="item-list">{itemOptions.map(o => <option key={o} value={o} />)}</datalist>
+                                        <div className="p-4 bg-blue-900 rounded-xl text-center font-bold text-white mb-4">總金額：{grandTotal.toLocaleString()} 元</div>
+                                    </div>
+                                    <button onClick={() => saveConfig(config)} className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 shadow-lg active:scale-95">💾 儲存活動設定</button>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm text-left border-collapse">
-                                <thead><tr className="bg-gray-100 text-gray-500 text-xs uppercase tracking-wider">
-                                    <th className="p-4 w-12 text-center"><input type="checkbox" className="w-5 h-5 accent-blue-600 cursor-pointer" checked={filteredInstructors.length > 0 && selectedIds.size === filteredInstructors.filter(i=>!i.decryptionFailed).length} onChange={handleSelectAll} /></th>
-                                    <th className="p-4">姓名</th>
-                                    <th className="p-4 text-center">存摺</th>
-                                    <th className="p-4 text-center">簽名</th>
-                                    <th className="p-4 text-right">操作</th>
-                                </tr></thead>
-                                <tbody className="divide-y divide-gray-100">
-                                    {filteredInstructors.length === 0 ? (
-                                        <tr><td colSpan="5" className="p-8 text-center text-gray-400 font-bold bg-gray-50">尚無資料。請點擊上方「複製專屬講師連結」傳送給講師填寫！</td></tr>
-                                    ) : filteredInstructors.map(i => (
-                                        <tr key={i.id} className={`hover:bg-blue-50/30 transition-colors group ${selectedIds.has(i.id) ? 'bg-blue-50' : ''}`}>
-                                            <td className="p-4 text-center"><input type="checkbox" className="w-5 h-5 accent-blue-600 cursor-pointer" checked={selectedIds.has(i.id)} onChange={() => handleSelectInstructor(i.id)} disabled={i.decryptionFailed}/></td>
-                                            <td className="p-4">
-                                                <div className="font-bold text-gray-800 text-base cursor-pointer select-none" onClick={() => !i.decryptionFailed && handleSelectInstructor(i.id)}>{i.name}</div>
-                                                {i.decryptionFailed ? <div className="text-[10px] text-red-500 font-bold">解密失敗</div> : <div className="text-[10px] text-gray-400">{maskIdNumber(i.idNumber)}</div>}
-                                            </td>
-                                            <td className="p-4 text-center">
-                                                {i.decryptionFailed ? '-' : i.passbookUrl ? <button onClick={() => setPreviewImageUrl(i.passbookUrl)} className="px-3 py-1.5 bg-blue-100 text-blue-700 font-bold rounded-lg hover:bg-blue-200">🖼️ 預覽</button> : <label className="cursor-pointer px-3 py-1.5 bg-gray-100 text-gray-500 rounded-lg hover:bg-gray-200 text-xs font-bold">📁 上傳<input type="file" accept="image/jpeg, image/png" className="hidden" onChange={(e) => handleQuickUpload(i.id, 'passbookUrl', e)} /></label>}
-                                            </td>
-                                            <td className="p-4 text-center">
-                                                {i.decryptionFailed ? '-' : i.signatureUrl ? <button onClick={() => setPreviewImageUrl(i.signatureUrl)} className="px-3 py-1.5 bg-green-100 text-green-700 font-bold rounded-lg hover:bg-green-200">✔ 預覽</button> : <label className="cursor-pointer px-3 py-1.5 bg-gray-100 text-gray-500 rounded-lg hover:bg-gray-200 text-xs font-bold">✍️ 上傳<input type="file" accept="image/jpeg, image/png" className="hidden" onChange={(e) => handleQuickUpload(i.id, 'signatureUrl', e)} /></label>}
-                                            </td>
-                                            <td className="p-4 text-right flex justify-end gap-2 items-center">
-                                                <button disabled={i.decryptionFailed} onClick={() => handleSinglePrint(i)} className={`px-4 py-2 rounded-xl font-bold shadow ${i.decryptionFailed ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>排版 👉</button>
-                                                <button onClick={() => setDeleteConfirmId(i.id)} className="px-4 py-2 rounded-xl font-bold shadow bg-red-100 text-red-600 hover:bg-red-200">刪除</button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                        <div className="w-full lg:w-2/3 bg-white p-8 rounded-2xl shadow-xl border-t-8 border-green-600 h-fit">
+                            <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 gap-4 border-b border-gray-100 pb-4">
+                                <div>
+                                    <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">2. 講師歷史清單</h2>
+                                    <p className="text-xs text-green-600 font-extrabold mt-1">✓ 本機安全自動解密中</p>
+                                </div>
+                                <div className="flex flex-wrap gap-2 w-full xl:w-auto">
+                                    <button onClick={() => { window.location.hash=''; sessionStorage.removeItem('receipt_channel'); setView('home'); }} className="flex-1 sm:flex-none bg-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-300">🏠 首頁</button>
+                                    <button onClick={handleCopyShareLink} className="flex-1 sm:flex-none bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-indigo-700 animate-pulse">🔗 複製專屬講師連結</button>
+                                    <button onClick={handleDownloadTemplate} className="flex-1 sm:flex-none bg-cyan-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-cyan-700 transition-colors">📄 下載範本</button>
+                                    <label className="flex-1 sm:flex-none bg-teal-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-teal-700 transition-colors cursor-pointer text-center flex items-center justify-center">
+                                        📥 匯入Excel
+                                        <input type="file" accept=".xlsx, .xls, .csv" className="hidden" onChange={handleImportExcel} />
+                                    </label>
+                                    <button onClick={() => setIsAddModalOpen(true)} className="flex-1 sm:flex-none bg-green-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-green-700">+ 新增</button>
+                                    <button onClick={handleBatchDownload} className="flex-1 sm:flex-none bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-orange-600">📥 匯出清單/圖片</button>
+                                    <button onClick={() => setIsClearModalOpen(true)} className="flex-1 sm:flex-none bg-red-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-red-700">🗑️ 清空</button>
+                                    <button onClick={handleLogoutAdmin} className="flex-1 sm:flex-none bg-gray-800 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-gray-900">🚪 登出</button>
+                                </div>
+                            </div>
+                            
+                            <div className="relative mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+                                <div className="relative w-full sm:flex-1">
+                                    <span className="absolute left-3 top-3 text-gray-400">🔍</span>
+                                    <input type="text" placeholder="搜尋講師..." className="w-full p-3 pl-10 border rounded-2xl bg-gray-50 focus:bg-white outline-none focus:ring-2 focus:ring-blue-500" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                                </div>
+                                <div className="flex items-center gap-3 w-full sm:w-auto">
+                                    {selectedIds.size > 0 && <span className="text-sm font-bold text-blue-600 whitespace-nowrap">已勾選 {selectedIds.size} 筆</span>}
+                                    <button onClick={handleBatchPrint} className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold shadow hover:bg-blue-700 flex justify-center items-center gap-2">🖨️ 批次排版列印</button>
+                                </div>
+                            </div>
+
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm text-left border-collapse">
+                                    <thead><tr className="bg-gray-100 text-gray-500 text-xs uppercase tracking-wider">
+                                        <th className="p-4 w-12 text-center"><input type="checkbox" className="w-5 h-5 accent-blue-600 cursor-pointer" checked={filteredInstructors.length > 0 && selectedIds.size === filteredInstructors.filter(i=>!i.decryptionFailed).length} onChange={handleSelectAll} /></th>
+                                        <th className="p-4">姓名</th>
+                                        <th className="p-4 text-center">存摺</th>
+                                        <th className="p-4 text-center">簽名</th>
+                                        <th className="p-4 text-right">操作</th>
+                                    </tr></thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {filteredInstructors.length === 0 ? (
+                                            <tr><td colSpan="5" className="p-8 text-center text-gray-400 font-bold bg-gray-50">尚無資料。請點擊上方「複製專屬講師連結」傳送給講師填寫！</td></tr>
+                                        ) : filteredInstructors.map(i => (
+                                            <tr key={i.id} className={`hover:bg-blue-50/30 transition-colors group ${selectedIds.has(i.id) ? 'bg-blue-50' : ''}`}>
+                                                <td className="p-4 text-center"><input type="checkbox" className="w-5 h-5 accent-blue-600 cursor-pointer" checked={selectedIds.has(i.id)} onChange={() => handleSelectInstructor(i.id)} disabled={i.decryptionFailed}/></td>
+                                                <td className="p-4">
+                                                    <div className="font-bold text-gray-800 text-base cursor-pointer select-none" onClick={() => !i.decryptionFailed && handleSelectInstructor(i.id)}>{i.name}</div>
+                                                    {i.decryptionFailed ? <div className="text-[10px] text-red-500 font-bold">解密失敗</div> : <div className="text-[10px] text-gray-400">{maskIdNumber(i.idNumber)}</div>}
+                                                </td>
+                                                <td className="p-4 text-center">
+                                                    {i.decryptionFailed ? '-' : i.passbookUrl ? <button onClick={() => setPreviewImageUrl(i.passbookUrl)} className="px-3 py-1.5 bg-blue-100 text-blue-700 font-bold rounded-lg hover:bg-blue-200">🖼️ 預覽</button> : <label className="cursor-pointer px-3 py-1.5 bg-gray-100 text-gray-500 rounded-lg hover:bg-gray-200 text-xs font-bold">📁 上傳<input type="file" accept="image/jpeg, image/png" className="hidden" onChange={(e) => handleQuickUpload(i.id, 'passbookUrl', e)} /></label>}
+                                                </td>
+                                                <td className="p-4 text-center">
+                                                    {i.decryptionFailed ? '-' : i.signatureUrl ? <button onClick={() => setPreviewImageUrl(i.signatureUrl)} className="px-3 py-1.5 bg-green-100 text-green-700 font-bold rounded-lg hover:bg-green-200">✔ 預覽</button> : <label className="cursor-pointer px-3 py-1.5 bg-gray-100 text-gray-500 rounded-lg hover:bg-gray-200 text-xs font-bold">✍️ 上傳<input type="file" accept="image/jpeg, image/png" className="hidden" onChange={(e) => handleQuickUpload(i.id, 'signatureUrl', e)} /></label>}
+                                                </td>
+                                                <td className="p-4 text-right flex justify-end gap-2 items-center">
+                                                    <button disabled={i.decryptionFailed} onClick={() => handleSinglePrint(i)} className={`px-4 py-2 rounded-xl font-bold shadow ${i.decryptionFailed ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>排版 👉</button>
+                                                    <button onClick={() => setDeleteConfirmId(i.id)} className="px-4 py-2 rounded-xl font-bold shadow bg-red-100 text-red-600 hover:bg-red-200">刪除</button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                    </div>
+                    </div> {/* 🔥 關閉左右排版的 flex 容器 */}
 
                     {/* 預覽圖檔彈窗 */}
                     {previewImageUrl && (

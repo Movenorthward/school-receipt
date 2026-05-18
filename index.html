@@ -36,7 +36,7 @@
         // ⚠️ 請在此處填入您的 Firebase 設定
         // ==========================================
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-             apiKey: "AIzaSyAeJVFba8QO4jY7-FiYZ7AwFqAnLSSOpes",
+            apiKey: "AIzaSyAeJVFba8QO4jY7-FiYZ7AwFqAnLSSOpes",
   authDomain: "schoolreceipt.firebaseapp.com",
   databaseURL: "https://schoolreceipt-default-rtdb.firebaseio.com",
   projectId: "schoolreceipt",
@@ -174,7 +174,111 @@
             );
         }
 
-        const ReceiptTemplate = ({ config, instructor, sysConfig, showSignature = true }) => {
+        // ==========================================
+        // 🔥 新增：直覺式簽名拖曳與縮放視窗元件
+        // ==========================================
+        const SignatureAdjustModal = ({ instructor, initialTransform, onSave, onClose }) => {
+            const [transform, setTransform] = useState(initialTransform || { x: 120, y: -10, width: 140 });
+            const [isDragging, setIsDragging] = useState(false);
+            const [isResizing, setIsResizing] = useState(false);
+            const [startPos, setStartPos] = useState({x:0, y:0, startWidth:0});
+
+            // 處理圖片本體的拖曳 (移動 X, Y 位置)
+            const handleDragStart = (e) => {
+                e.stopPropagation();
+                setIsDragging(true);
+                setStartPos({ x: e.clientX - transform.x, y: e.clientY - transform.y });
+                e.target.setPointerCapture(e.pointerId);
+            };
+            const handleDragMove = (e) => {
+                if (!isDragging) return;
+                setTransform(prev => ({ ...prev, x: e.clientX - startPos.x, y: e.clientY - startPos.y }));
+            };
+            const handleDragEnd = (e) => {
+                setIsDragging(false);
+                e.target.releasePointerCapture(e.pointerId);
+            };
+
+            // 處理右下角藍點的拖曳 (改變 Width 寬度縮放)
+            const handleResizeStart = (e) => {
+                e.stopPropagation();
+                setIsResizing(true);
+                setStartPos({ x: e.clientX, startWidth: transform.width });
+                e.target.setPointerCapture(e.pointerId);
+            };
+            const handleResizeMove = (e) => {
+                if (!isResizing) return;
+                const deltaX = e.clientX - startPos.x;
+                setTransform(prev => ({ ...prev, width: Math.max(30, startPos.startWidth + deltaX) }));
+            };
+            const handleResizeEnd = (e) => {
+                setIsResizing(false);
+                e.target.releasePointerCapture(e.pointerId);
+            };
+
+            return (
+                <div className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center p-4 print-hide" onClick={onClose}>
+                    <div className="bg-white p-6 rounded-3xl shadow-2xl w-full max-w-2xl flex flex-col animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
+                        <h3 className="text-xl font-bold mb-2 text-center text-blue-900">調整 {instructor.name} 的簽名檔</h3>
+                        <p className="text-xs text-gray-500 mb-4 text-center bg-blue-50 p-2 rounded-lg">💡 可直接在下方<span className="font-bold text-blue-600">「拖曳簽名」</span>移動位置，或拖曳<span className="font-bold text-blue-600">「右下角藍點」</span>縮放大小。</p>
+                        
+                        {/* 模擬領據的格子 */}
+                        <div className="bg-gray-100 p-8 rounded-xl flex justify-center mb-6 overflow-hidden border-2 border-dashed border-gray-300">
+                            <div className="bg-white border-2 border-black w-full max-w-lg relative" style={{ height: '65px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', height: '100%', padding: '0 10px', position: 'relative' }}>
+                                    <span style={{ fontSize: '1.25rem', fontWeight: 'bold', zIndex: 10 }}>{instructor.name}</span>
+                                    
+                                    <div style={{ position: 'absolute', left: `${transform.x}px`, top: `${transform.y}px`, width: `${transform.width}px`, zIndex: 50, touchAction: 'none' }}>
+                                        <img 
+                                            src={instructor.signatureUrl} 
+                                            alt="Signature" 
+                                            style={{ width: '100%', height: 'auto', mixBlendMode: 'multiply', cursor: 'move', border: '2px dashed #93c5fd', backgroundColor: 'rgba(219, 234, 254, 0.4)' }} 
+                                            onPointerDown={handleDragStart}
+                                            onPointerMove={handleDragMove}
+                                            onPointerUp={handleDragEnd}
+                                            onPointerCancel={handleDragEnd}
+                                            draggable="false"
+                                        />
+                                        {/* 縮放控制拉柄 */}
+                                        <div 
+                                            style={{ position: 'absolute', right: '-10px', bottom: '-10px', width: '24px', height: '24px', backgroundColor: '#2563eb', borderRadius: '50%', cursor: 'se-resize', boxShadow: '0 2px 4px rgba(0,0,0,0.3)', border: '2px solid white' }}
+                                            onPointerDown={handleResizeStart}
+                                            onPointerMove={handleResizeMove}
+                                            onPointerUp={handleResizeEnd}
+                                            onPointerCancel={handleResizeEnd}
+                                            title="拖曳我來縮放簽名"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 備用數值 Slider 調整 (確保全裝置通用) */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 bg-gray-50 p-4 rounded-xl">
+                            <label className="flex flex-col text-xs font-bold text-gray-700">
+                                ↔️ 左右定位: {Math.round(transform.x)}
+                                <input type="range" min="-50" max="400" value={transform.x} onChange={e => setTransform(p => ({...p, x: parseFloat(e.target.value)}))} className="mt-2 accent-blue-600" />
+                            </label>
+                            <label className="flex flex-col text-xs font-bold text-gray-700">
+                                ↕️ 上下定位: {Math.round(transform.y)}
+                                <input type="range" min="-100" max="100" value={transform.y} onChange={e => setTransform(p => ({...p, y: parseFloat(e.target.value)}))} className="mt-2 accent-blue-600" />
+                            </label>
+                            <label className="flex flex-col text-xs font-bold text-gray-700">
+                                🔍 縮放大小: {Math.round(transform.width)}
+                                <input type="range" min="30" max="300" value={transform.width} onChange={e => setTransform(p => ({...p, width: parseFloat(e.target.value)}))} className="mt-2 accent-blue-600" />
+                            </label>
+                        </div>
+
+                        <div className="flex gap-4">
+                            <button onClick={onClose} className="flex-1 py-3 border-2 border-gray-200 rounded-xl font-bold text-gray-500 hover:bg-gray-50 transition-colors shadow-sm">取消</button>
+                            <button onClick={() => onSave(transform)} className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-colors text-lg tracking-widest">✔ 確定套用</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const ReceiptTemplate = ({ config, instructor, sysConfig, showSignature = true, sigTransform, onEditSignature }) => {
             const totalAmount = config.items ? config.items.reduce((sum, item) => sum + (item.qty * item.price), 0) : 0;
             const chineseAmount = numberToChinese(totalAmount);
 
@@ -184,6 +288,9 @@
             
             const bgCyan = { backgroundColor: '#d1fae5', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' };
             const bgYellow = { backgroundColor: '#fef08a', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' };
+
+            // 讀取當前講師的專屬簽名定位，若無則套用預設值
+            const transform = sigTransform || { x: 120, y: -10, width: 140 };
 
             return (
                 <div style={{ width: '800px', minWidth: '800px', margin: '0 auto', boxSizing: 'border-box', background: '#fff' }}>
@@ -199,11 +306,28 @@
                             <tr><td colSpan="4" style={{...tdStyle, paddingLeft: '2rem', fontSize: '1.2rem', fontWeight: 'bold'}}>{config.schoolName}</td></tr>
                             <tr>
                                 <td style={{...tdStyle, textAlign: 'center', whiteSpace: 'nowrap'}}>具領人簽章：</td>
-                                {/* 🔥 修正：調高欄位高度至 65px，字體加大至 1.25rem，並放大簽名圖片 */}
+                                {/* 🔥 修正：固定高度 65px 防止爆版，並加入點擊事件以觸發調整視窗 */}
                                 <td style={{...tdStyle, padding: '0', height: '65px', position: 'relative'}}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '100%', padding: '0 10px' }}>
-                                        <span style={{ fontSize: '1.25rem', fontWeight: 'bold', wordBreak: 'break-all', maxWidth: '40%' }}>{instructor.name}</span>
-                                        {showSignature && instructor.signatureUrl && <img src={instructor.signatureUrl} alt="Signature" style={{ maxHeight: '55px', maxWidth: '60%', objectFit: 'contain' }} />}
+                                    <div style={{ display: 'flex', alignItems: 'center', height: '100%', padding: '0 10px', position: 'relative' }}>
+                                        <span style={{ fontSize: '1.25rem', fontWeight: 'bold', wordBreak: 'break-all', maxWidth: '40%', position: 'relative', zIndex: 10 }}>{instructor.name}</span>
+                                        {showSignature && instructor.signatureUrl && (
+                                            <img 
+                                                src={instructor.signatureUrl} 
+                                                alt="Signature" 
+                                                className={onEditSignature ? "hover:outline hover:outline-2 hover:outline-blue-500 hover:bg-blue-50/50 cursor-pointer transition-all rounded" : ""}
+                                                onClick={() => onEditSignature && onEditSignature(instructor)}
+                                                title={onEditSignature ? "點擊拖曳與調整簽名大小" : ""}
+                                                style={{ 
+                                                    position: 'absolute', 
+                                                    left: `${transform.x}px`, 
+                                                    top: `${transform.y}px`, 
+                                                    width: `${transform.width}px`, 
+                                                    objectFit: 'contain', 
+                                                    zIndex: 50,
+                                                    mixBlendMode: 'multiply' 
+                                                }} 
+                                            />
+                                        )}
                                     </div>
                                 </td>
                                 <td style={{...tdStyle, textAlign: 'center', whiteSpace: 'nowrap'}}>身分證字號：</td>
@@ -456,7 +580,7 @@
                         {view === 'admin' && <AdminView setView={setView} user={user} appId={MY_PROJECT_ID} targetAdminId={targetAdminId} showToast={showToast} />}
                         {view === 'instructor' && <InstructorView setView={setView} user={user} appId={MY_PROJECT_ID} targetAdminId={targetAdminId} showToast={showToast} />}
                     </div>
-                    <div className="text-center text-gray-400 text-sm py-4 print-hide font-bold">@2026 Master (版本：V3-Google實名頻道隔離版)</div>
+                    <div className="text-center text-gray-400 text-sm py-4 print-hide font-bold">@2026 Master</div>
                     <Toast message={toastMsg} onClose={() => setToastMsg('')} />
                 </div>
             );
@@ -513,7 +637,8 @@
                     const ctx = canvasEl.getContext('2d');
                     const rect = canvasEl.parentElement.getBoundingClientRect();
                     canvasEl.width = rect.width; canvasEl.height = rect.height;
-                    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvasEl.width, canvasEl.height);
+                    // 🔥 去背核心：不再填滿白色，而是清空為透明
+                    ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
                     ctx.strokeStyle = '#000000'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
                 }, 100);
             }, [isSignModalOpen]);
@@ -527,8 +652,10 @@
             const startDrawing = (e) => { setIsDrawing(true); const pos = getPos(e); canvasRef.current.getContext('2d').beginPath(); canvasRef.current.getContext('2d').moveTo(pos.x, pos.y); };
             const draw = (e) => { if (!isDrawing) return; const pos = getPos(e); canvasRef.current.getContext('2d').lineTo(pos.x, pos.y); canvasRef.current.getContext('2d').stroke(); };
             const stopDrawing = () => { if (isDrawing) { canvasRef.current.getContext('2d').closePath(); setIsDrawing(false); } };
-            const clearSignature = () => { const ctx = canvasRef.current.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height); setSignatureUrl(null); };
-            const confirmSignature = () => { setSignatureUrl(canvasRef.current.toDataURL('image/jpeg', 0.8)); setIsSignModalOpen(false); };
+            // 🔥 去背核心：清除畫面改用 clearRect
+            const clearSignature = () => { const ctx = canvasRef.current.getContext('2d'); ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height); setSignatureUrl(null); };
+            // 🔥 去背核心：存成 image/png 以支援透明通道
+            const confirmSignature = () => { setSignatureUrl(canvasRef.current.toDataURL('image/png')); setIsSignModalOpen(false); };
 
             const handlePhotoUpload = async (e) => {
                 const file = e.target.files[0];
@@ -707,7 +834,7 @@
             const [instructorsRaw, setInstructorsRaw] = useState([]);
             
             // 安全金鑰狀態
-            const [isAuthFetched, setIsAuthFetched] = useState(false); // 🔥 新增：確保先確認雲端金鑰狀態
+            const [isAuthFetched, setIsAuthFetched] = useState(false);
             const [authConfig, setAuthConfig] = useState({ publicKey: null, encryptedPrivateKey: null });
             const [adminKey, setAdminKey] = useState(null);
             const [isGenerating, setIsGenerating] = useState(false);
@@ -718,7 +845,7 @@
             const [selectedInstructors, setSelectedInstructors] = useState([]);
             const [viewMode, setViewMode] = useState('dashboard');
             
-            // 彈窗狀態
+            // 彈窗與排版狀態
             const [isAddModalOpen, setIsAddModalOpen] = useState(false);
             const [addFormData, setAddFormData] = useState({ name: '', idNumber: '', address: '', bankType: 'bank', bankName: '', bankBranch: '', bankAccount: '', postOffice: '', postAccount: '', phone: '' });
             const [previewImageUrl, setPreviewImageUrl] = useState(null);
@@ -748,7 +875,6 @@
                     if (docSnap.exists() && docSnap.data().itemNames) setItemOptions(docSnap.data().itemNames);
                 }, (err) => console.error("options snapshot error:", err));
                 
-                // 🔥 修復金鑰覆蓋 Bug：確實等待快取讀取完畢
                 const unsubAuth = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', `auth_${channelId}`), (docSnap) => {
                     if (docSnap.exists()) {
                         setAuthConfig(docSnap.data());
@@ -770,7 +896,6 @@
                 return () => { unsubConfig(); unsubSys(); unsubOptions(); unsubAuth(); unsubInstructors(); };
             }, [appId, channelId, today, user]);
 
-            // 自動解密專屬私鑰
             useEffect(() => {
                 if (authConfig.encryptedPrivateKey && user) {
                     try {
@@ -781,7 +906,6 @@
                 }
             }, [authConfig.encryptedPrivateKey, user]);
 
-            // 自動解密講師資料
             const decryptedInstructors = useMemo(() => {
                 if (!adminKey) return [];
                 return instructorsRaw.map(inst => {
@@ -808,9 +932,9 @@
                 return decryptedInstructors.filter(i => i.name?.includes(searchTerm) || (i.idNumber && i.idNumber.includes(searchTerm)));
             }, [decryptedInstructors, searchTerm]);
 
-            // --- 自動產生 RSA 金鑰 ---
             useEffect(() => {
-                if (!user || user.isAnonymous || !isAuthFetched) return; // 🔥 修復 Bug：確認資料庫讀取完畢才判斷
+                if (!user || user.isAnonymous || !isAuthFetched) return; 
+                if (authConfig && authConfig.publicKey === undefined) return; 
                 if (authConfig.publicKey === null && !isGenerating) {
                     setIsGenerating(true);
                     setTimeout(async () => {
@@ -855,7 +979,6 @@
                 );
             }
 
-            // --- 管理員操作功能 ---
             const saveConfig = async (newConfig) => {
                 try {
                     await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', `current_${channelId}`), newConfig);
@@ -884,7 +1007,7 @@
                 try {
                     if (document.execCommand('copy')) showToast("📋 已複製！請將連結傳給講師，他們會自動被導引到您的頻道填寫。");
                     else throw new Error('Failed');
-                } catch (err) { prompt("您的瀏覽器阻擋自動複製，請手手動複製網址：", shareUrl); }
+                } catch (err) { prompt("您的瀏覽器阻擋自動複製，請手動複製網址：", shareUrl); }
                 document.body.removeChild(el);
             };
 
@@ -1102,7 +1225,6 @@
 
             return (
                 <div className="max-w-7xl mx-auto my-8 p-4 flex gap-6 flex-col lg:flex-row print-hide">
-                    {/* 左側：設定區 */}
                     <div className="w-full lg:w-1/3 space-y-6">
                         <div className="bg-white p-6 rounded-2xl shadow-xl border-t-8 border-purple-600">
                             <h2 className="text-xl font-bold mb-4 text-purple-900">🏢 發放單位設定</h2>
@@ -1151,7 +1273,6 @@
                         </div>
                     </div>
 
-                    {/* 右側：清單區 */}
                     <div className="w-full lg:w-2/3 bg-white p-8 rounded-2xl shadow-xl border-t-8 border-green-600 h-fit">
                         <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 gap-4 border-b border-gray-100 pb-4">
                             <div>
@@ -1277,6 +1398,10 @@
             const [marginY, setMarginY] = useState(15);
             const [marginX, setMarginX] = useState(15);
             const [paperSize, setPaperSize] = useState('a4');
+            
+            // 🔥 新增：用來記錄每個講師簽名檔拖曳狀態的變數
+            const [sigTransforms, setSigTransforms] = useState({});
+            const [editingInstructor, setEditingInstructor] = useState(null);
 
             const createPDF = async () => {
                 if (!window.jspdf || !window.html2canvas) {
@@ -1349,7 +1474,7 @@
                                     <input type="range" min="50" max="150" step="1" value={scalePercent} onChange={(e) => setScalePercent(parseInt(e.target.value) || 100)} className="w-16 accent-blue-500 hidden sm:block" />
                                     <input type="number" min="10" max="200" step="1" value={scalePercent} onChange={(e) => setScalePercent(parseInt(e.target.value) || 100)} className="w-12 px-1 text-center text-black rounded outline-none" /> %
                                 </label>
-                                <label className="flex items-center gap-1 cursor-pointer text-xs font-bold text-gray-300 hover:text-white transition-colors border-l border-gray-600 pl-4">
+                                <label className="flex items-center gap-1 cursor-pointer text-xs font-bold text-gray-300 hover:text-white transition-colors border-l border-gray-600 pl-4" title="將簽名檔放置於領據中">
                                     <input type="checkbox" checked={showSignature} onChange={(e) => setShowSignature(e.target.checked)} className="w-4 h-4 accent-blue-500 cursor-pointer" />
                                     簽名
                                 </label>
@@ -1361,6 +1486,20 @@
                             </div>
                         </div>
                     </div>
+                    
+                    {/* 🔥 新增：當點選簽名時彈出的調整視窗 */}
+                    {editingInstructor && (
+                        <SignatureAdjustModal 
+                            instructor={editingInstructor}
+                            initialTransform={sigTransforms[editingInstructor.id]} 
+                            onSave={(newTransform) => {
+                                setSigTransforms(prev => ({ ...prev, [editingInstructor.id]: newTransform }));
+                                setEditingInstructor(null);
+                            }}
+                            onClose={() => setEditingInstructor(null)}
+                        />
+                    )}
+
                     <div className="w-full flex flex-col items-center py-10 bg-gray-200 min-h-screen print:bg-white print:py-0 print:min-h-0">
                         <div id="print-root" className="w-full mx-auto flex flex-col items-center">
                             {pages.map((pageInstructors, pageIndex) => (
@@ -1370,7 +1509,15 @@
                                         <React.Fragment key={instructor.id}>
                                             <div className="flex-1 flex flex-col justify-start items-center overflow-hidden w-full relative">
                                                 <div className="scale-container" style={{ transform: `scale(${scalePercent / 100})`, transformOrigin: 'top center', width: `${100 / (scalePercent / 100)}%` }}>
-                                                    <ReceiptTemplate config={config} instructor={instructor} sysConfig={sysConfig} showSignature={showSignature} />
+                                                    {/* 🔥 傳入調整狀態與編輯點擊事件 */}
+                                                    <ReceiptTemplate 
+                                                        config={config} 
+                                                        instructor={instructor} 
+                                                        sysConfig={sysConfig} 
+                                                        showSignature={showSignature}
+                                                        sigTransform={sigTransforms[instructor.id]}
+                                                        onEditSignature={(inst) => setEditingInstructor(inst)} 
+                                                    />
                                                 </div>
                                             </div>
                                             {itemIndex === 0 && pageInstructors.length > 1 && (<div className="cut-line w-full border-t border-dashed border-gray-400 relative flex items-center justify-center print:hidden" style={{ height: '0', margin: '2mm 0' }}><span className="absolute bg-white px-2 text-gray-500 text-[10px] tracking-widest">✂️ 裁切線</span></div>)}

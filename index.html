@@ -48,7 +48,7 @@
         // ⚠️ 請在此處填入您的 Firebase 設定
         // ==========================================
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-           apiKey: "AIzaSyAeJVFba8QO4jY7-FiYZ7AwFqAnLSSOpes",
+          apiKey: "AIzaSyAeJVFba8QO4jY7-FiYZ7AwFqAnLSSOpes",
   authDomain: "schoolreceipt.firebaseapp.com",
   databaseURL: "https://schoolreceipt-default-rtdb.firebaseio.com",
   projectId: "schoolreceipt",
@@ -56,7 +56,6 @@
   messagingSenderId: "659224947682",
   appId: "1:659224947682:web:354676983bfe48343127bb",
   measurementId: "G-ERJXNF3JTG"
-        };
 
         // 防呆機制
         if (!firebaseConfig.apiKey && typeof __firebase_config === 'undefined') {
@@ -159,7 +158,10 @@
                             canvas.height = img.height * scaleSize;
                             const ctx = canvas.getContext('2d');
                             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                            const dataUrl = canvas.toDataURL('image/jpeg', 0.4);
+                            // 🔥 去背修正：確保 PNG 上傳時不被強制轉存成不支援透明的 JPEG
+                            const mimeType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+                            const quality = mimeType === 'image/jpeg' ? 0.4 : undefined;
+                            const dataUrl = canvas.toDataURL(mimeType, quality);
                             canvas.width = 0; canvas.height = 0; img.src = '';
                             resolve(dataUrl); 
                         } catch (err) { reject(err); }
@@ -229,7 +231,8 @@
                                 <div style={{ display: 'flex', alignItems: 'center', height: '100%', padding: '0 10px', position: 'relative' }}>
                                     <span style={{ fontSize: '1.25rem', fontWeight: 'bold', zIndex: 10 }}>{instructor.name}</span>
                                     <div style={{ position: 'absolute', left: `${transform.x}px`, top: `${transform.y}px`, width: `${transform.width}px`, zIndex: 50, touchAction: 'none' }}>
-                                        <img src={instructor.signatureUrl} alt="Signature" style={{ width: '100%', height: 'auto', mixBlendMode: 'multiply', cursor: 'move', border: '2px dashed #93c5fd', backgroundColor: 'rgba(219, 234, 254, 0.4)' }} onPointerDown={handleDragStart} onPointerMove={handleDragMove} onPointerUp={handleDragEnd} onPointerCancel={handleDragEnd} draggable="false" />
+                                        {/* 🔥 移除導致 PDF 引擎誤判白底的 mixBlendMode */}
+                                        <img src={instructor.signatureUrl} alt="Signature" style={{ width: '100%', height: 'auto', cursor: 'move', border: '2px dashed #93c5fd', backgroundColor: 'rgba(219, 234, 254, 0.4)' }} onPointerDown={handleDragStart} onPointerMove={handleDragMove} onPointerUp={handleDragEnd} onPointerCancel={handleDragEnd} draggable="false" />
                                         <div style={{ position: 'absolute', right: '-10px', bottom: '-10px', width: '24px', height: '24px', backgroundColor: '#2563eb', borderRadius: '50%', cursor: 'se-resize', boxShadow: '0 2px 4px rgba(0,0,0,0.3)', border: '2px solid white' }} onPointerDown={handleResizeStart} onPointerMove={handleResizeMove} onPointerUp={handleResizeEnd} onPointerCancel={handleResizeEnd} title="拖曳我來縮放簽名" />
                                     </div>
                                 </div>
@@ -293,8 +296,7 @@
                                                     top: `${transform.y}px`, 
                                                     width: `${transform.width}px`, 
                                                     objectFit: 'contain', 
-                                                    zIndex: 50,
-                                                    mixBlendMode: 'multiply' 
+                                                    zIndex: 50
                                                 }} 
                                             />
                                         )}

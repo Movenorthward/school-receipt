@@ -12,6 +12,7 @@
 方案一：直接使用發布版網址 (最推薦 🌟)
 
 請直接點擊下方網址，登入您的 Google 帳號即可開始使用：
+
 👉 進入系統：https://movenorthward.github.io/school-receipt/
 
 【如何運作？】

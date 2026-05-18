@@ -22,7 +22,7 @@
 
     <script type="text/babel" data-type="module" data-presets="react">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
-        import { getAuth, onAuthStateChanged, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+        import { getAuth, onAuthStateChanged, signInWithCustomToken, signInAnonymously, GoogleAuthProvider, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
         import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, addDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
         const { useState, useEffect, useRef, useMemo } = React;
@@ -36,7 +36,7 @@
         // ⚠️ 請在此處填入您的 Firebase 設定
         // ==========================================
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-         apiKey: "AIzaSyAeJVFba8QO4jY7-FiYZ7AwFqAnLSSOpes",
+           apiKey: "AIzaSyAeJVFba8QO4jY7-FiYZ7AwFqAnLSSOpes",
   authDomain: "schoolreceipt.firebaseapp.com",
   databaseURL: "https://schoolreceipt-default-rtdb.firebaseio.com",
   projectId: "schoolreceipt",
@@ -270,12 +270,12 @@
             
             // 核心狀態：頻道 ID 與 視窗狀態
             const [targetAdminId, setTargetAdminId] = useState('');
-            const [view, setView] = useState(''); 
+            const [view, setView] = useState('home'); 
 
-            // 🔥 新增：用來儲存當前登入者是否已有專屬單位的狀態，用於客製化首頁
+            // 用來儲存當前登入者是否已有專屬單位的狀態，用於客製化首頁標題
             const [homeSysConfig, setHomeSysConfig] = useState(null);
 
-            // 1. 初始化資源與 Firebase Auth
+            // 1. 初始化資源與 Firebase Auth (支援匿名供講師寫入，Google 供管理員登入)
             useEffect(() => {
                 const loadScripts = async () => {
                     const scripts = [
@@ -300,45 +300,48 @@
                 };
                 loadScripts();
 
-                const initAuth = async () => {
-                    try {
-                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                            await signInWithCustomToken(auth, __initial_auth_token);
-                        }
-                    } catch (error) { console.error(error); }
-                };
-                initAuth();
-                const unsubscribe = onAuthStateChanged(auth, setUser);
+                const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+                    if (!currentUser) {
+                        // 若無使用者，自動進行匿名登入以取得寫入 Firestore 的權限
+                        try {
+                            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                                await signInWithCustomToken(auth, __initial_auth_token);
+                            } else {
+                                await signInAnonymously(auth);
+                            }
+                        } catch (e) {}
+                    } else {
+                        setUser(currentUser);
+                    }
+                });
                 return () => unsubscribe();
             }, []);
 
             // 2. 路由控制：根據 Hash 與身分決定視窗
             useEffect(() => {
-                if (!user) return; // 沒登入前不決定視窗
-                
                 const handleRouting = () => {
                     const hash = window.location.hash.substring(1);
                     if (hash) {
-                        // 有 Hash 代表是講師點進來的，或者重新整理
                         setTargetAdminId(hash);
-                        // 如果 Hash 剛好是自己的 UID，代表是管理員重新整理
-                        if (hash === user.uid) setView('admin');
-                        else setView('instructor');
+                        setView('instructor');
                     } else {
-                        // 沒有 Hash，顯示首頁選擇畫面
                         setView('home');
                         setTargetAdminId('');
                     }
                 };
                 
+                // 初次載入與 hash 改變時執行
                 handleRouting();
                 window.addEventListener('hashchange', handleRouting);
                 return () => window.removeEventListener('hashchange', handleRouting);
-            }, [user]);
+            }, []);
 
-            // 🔥 新增：當使用者登入後，背景查詢他是否已經設定過單位名稱
+            // 3. 當使用者以 Google 登入後，背景查詢他是否已經設定過單位名稱
             useEffect(() => {
-                if (!user) return;
+                if (!user || user.isAnonymous) {
+                    setHomeSysConfig(null);
+                    return;
+                }
                 const unsub = onSnapshot(doc(db, 'artifacts', MY_PROJECT_ID, 'public', 'data', 'config', `system_${user.uid}`), (docSnap) => {
                     if (docSnap.exists()) {
                         setHomeSysConfig(docSnap.data());
@@ -349,24 +352,50 @@
                 return () => unsub();
             }, [user]);
 
-            const handleGoogleLogin = async () => {
-                const provider = new GoogleAuthProvider();
-                try { await signInWithPopup(auth, provider); } 
-                catch (error) { alert("登入失敗: " + error.message); }
+            // 🔥 行為控制：點擊行政管理員
+            const goAdmin = async () => {
+                if (!user || user.isAnonymous) {
+                    const provider = new GoogleAuthProvider();
+                    try { 
+                        const result = await signInWithPopup(auth, provider); 
+                        // 登入後進入後台
+                        setTargetAdminId(result.user.uid);
+                        setView('admin');
+                    } 
+                    catch (error) { 
+                        if (error.code !== 'auth/popup-closed-by-user') {
+                            alert("登入失敗: " + error.message); 
+                        }
+                    }
+                } else {
+                    setTargetAdminId(user.uid);
+                    setView('admin');
+                }
             };
 
-            const goAdmin = () => {
-                if (!user) return;
-                // 將頻道 ID 設為自己的 Google UID，進入無密碼隔離空間
-                setTargetAdminId(user.uid);
-                window.location.hash = user.uid;
+            // 🔥 行為控制：點擊我是講師
+            const goInstructor = () => {
+                // 如果目前是匿名訪客 (未登入 Google)
+                if (!user || user.isAnonymous) {
+                    // 且沒有特定頻道的網址 hash -> 擋下並提示
+                    if (!targetAdminId) {
+                        alert("請點擊承辦人提供的「專屬網址連結」來填寫資料！\n\n(或者若您是承辦人，請先點擊『行政管理員』登入)");
+                    } else {
+                        setView('instructor');
+                    }
+                } else {
+                    // 若是管理員登入狀態下自己點擊「我是講師」，自動幫他套用專屬連結，方便測試
+                    window.location.hash = user.uid;
+                }
             };
 
             const handleLogout = async () => {
                 try { await signOut(auth); } catch(e) {}
-                setView('');
+                // 登出 Google 帳號後，重新補上匿名權限給講師使用
+                try { await signInAnonymously(auth); } catch(e) {}
                 window.location.hash = '';
-                showToast('👋 已安全登出系統');
+                setView('home');
+                showToast('👋 已登出 Google 帳號');
             };
 
             if (!isAppReady) return (
@@ -376,55 +405,45 @@
                 </div>
             );
 
-            // 🌟 強制 Google 實名登入閘門
-            if (!user) return (
-                <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4 print:hidden">
-                    <div className="bg-white p-10 rounded-3xl shadow-2xl max-w-md w-full text-center border-t-8 border-blue-500 animate-in zoom-in-95">
-                        <div className="text-6xl mb-6">🎓</div>
-                        <h2 className="text-3xl font-extrabold text-gray-800 mb-2">經費領據系統</h2>
-                        <p className="text-gray-500 mb-8 font-medium">為確保資料安全與隔離，請先實名登入</p>
-                        <button onClick={handleGoogleLogin} className="w-full flex items-center justify-center gap-4 bg-white border-2 border-gray-200 rounded-2xl px-6 py-4 text-gray-700 font-bold hover:bg-gray-50 hover:border-blue-300 transition-all shadow-sm active:scale-95">
-                            <svg className="w-6 h-6" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" /><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" /><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" /><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 15.02 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" /></svg>
-                            <span className="text-lg">使用 Google 帳號登入</span>
-                        </button>
-                    </div>
-                </div>
-            );
-
             return (
                 <div className="flex flex-col min-h-screen bg-gray-50 font-sans text-gray-900 print:bg-white print:m-0 print:p-0" id="app-main-view">
                     <div className="flex-1 pb-12 print:pb-0 print:m-0 print:p-0">
+                        
+                        {/* 🌟 永遠先顯示的首頁閘門 */}
                         {view === 'home' && (
                             <div className="flex flex-col items-center justify-center min-h-[85vh] p-6 print-hide">
                                 <div className="text-center mb-10 space-y-2">
-                                    {/* 🔥 動態判斷：如果有抓到單位名稱，就顯示專屬標題 */}
-                                    {homeSysConfig ? (
+                                    {homeSysConfig && !user?.isAnonymous ? (
                                         <>
+                                            {/* 🔥 管理員專屬標題 */}
                                             <h1 className="text-3xl sm:text-4xl font-extrabold text-blue-600 tracking-tight">{homeSysConfig.schoolName} {homeSysConfig.deptName}</h1>
-                                            <h1 className="text-2xl sm:text-3xl font-extrabold text-blue-900 tracking-tight mt-2">專屬領據管理後台</h1>
+                                            <h1 className="text-2xl sm:text-3xl font-extrabold text-blue-900 tracking-tight mt-2">領據管理系統</h1>
                                             <p className="text-gray-500 mt-2">管理員：{user.displayName || user.email}</p>
                                         </>
                                     ) : (
                                         <>
+                                            {/* 公版標題 */}
                                             <h1 className="text-3xl sm:text-4xl font-extrabold text-blue-900 tracking-tight">經費領據管理系統</h1>
-                                            <p className="text-gray-500">歡迎, {user.displayName || user.email}</p>
+                                            <p className="text-gray-500">歡迎使用</p>
                                         </>
                                     )}
                                 </div>
                                 <div className="flex flex-col sm:flex-row gap-8 w-full max-w-2xl">
-                                    <div className="flex-1 bg-white border-2 border-gray-200 text-gray-400 p-10 rounded-2xl flex flex-col items-center text-center">
-                                        <span className="text-5xl mb-4">✍️</span>
-                                        <span className="text-2xl font-bold text-gray-600">我是講師</span>
-                                        <span className="text-sm mt-3 text-gray-400">請直接點擊承辦人提供的<br/>「專屬網址連結」來填寫資料！</span>
-                                    </div>
+                                    <button onClick={goInstructor} className="flex-1 bg-white border-2 border-green-500 text-green-700 p-10 rounded-2xl shadow-xl hover:shadow-2xl hover:bg-green-50 transition-all duration-300 flex flex-col items-center group cursor-pointer">
+                                        <span className="text-5xl mb-4 group-hover:scale-110 transition-transform">✍️</span>
+                                        <span className="text-2xl font-bold">我是講師</span>
+                                        <span className="text-sm mt-3 text-gray-500">
+                                            {(!user || user.isAnonymous) ? "全自動高強度安全加密" : "預覽與測試我的專屬表單"}
+                                        </span>
+                                    </button>
                                     <button onClick={goAdmin} className="flex-1 bg-white border-2 border-blue-600 text-blue-800 p-10 rounded-2xl shadow-xl hover:shadow-2xl hover:bg-blue-50 transition-all duration-300 flex flex-col items-center group">
                                         <span className="text-5xl mb-4 group-hover:scale-110 transition-transform">⚙️</span>
                                         <span className="text-2xl font-bold">行政管理員</span>
-                                        {/* 按鈕文字也會跟著動態改變 */}
-                                        <span className="text-sm mt-3 text-gray-500">{homeSysConfig ? '進入我的管理後台' : '建立與管理我的專屬表單'}</span>
+                                        <span className="text-sm mt-3 text-gray-500">
+                                            {homeSysConfig && !user?.isAnonymous ? '進入我的管理後台' : '建立與管理我的專屬表單'}
+                                        </span>
                                     </button>
                                 </div>
-                                <button onClick={handleLogout} className="mt-10 text-gray-400 hover:text-red-500 underline font-bold">登出 Google 帳號</button>
                             </div>
                         )}
                         
@@ -448,7 +467,7 @@
             const [authConfig, setAuthConfig] = useState({ publicKey: null });
             
             const [step, setStep] = useState('form');
-            const [formData, setFormData] = useState({ name: user.displayName || '', idNumber: '', address: '', bankType: 'bank', bankName: '', bankBranch: '', bankAccount: '', postOffice: '', postAccount: '', phone: '' });
+            const [formData, setFormData] = useState({ name: user?.displayName || '', idNumber: '', address: '', bankType: 'bank', bankName: '', bankBranch: '', bankAccount: '', postOffice: '', postAccount: '', phone: '' });
             const [signatureUrl, setSignatureUrl] = useState(null);
             const [passbookUrl, setPassbookUrl] = useState(null);
             const [isAgreed, setIsAgreed] = useState(false);
@@ -458,7 +477,7 @@
             const [isSubmitting, setIsSubmitting] = useState(false);
 
             useEffect(() => {
-                if (!user) return; // 權限防護
+                if (!user) return; 
 
                 const unsubConfig = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', `current_${channelId}`), (docSnap) => {
                     if (docSnap.exists()) setConfig(docSnap.data());
@@ -531,8 +550,8 @@
                         name: formData.name, payload: encryptedPayload, e2eeKey: encryptedSessionKey, createdAt: Date.now(), userId: user.uid 
                     });
                     showToast('🔒 您的資料已完成自動加密並成功傳送給承辦人！');
-                    setView('home');
                     window.location.hash = '';
+                    setView('home');
                 } catch (error) { showToast(`❌ 上傳失敗`); } finally { setIsSubmitting(false); }
             };
 
@@ -583,7 +602,7 @@
 
             return (
                 <div className="max-w-2xl mx-auto my-10 p-8 bg-white rounded-3xl shadow-xl border border-gray-50 print-hide">
-                    <button onClick={() => { setView('home'); window.location.hash=''; }} className="mb-6 text-blue-600 flex items-center hover:underline">← 取消並返回</button>
+                    <button onClick={() => { window.location.hash=''; setView('home'); }} className="mb-6 text-blue-600 flex items-center hover:underline">← 取消並返回首頁</button>
                     <div className="mb-8">
                         <p className="text-blue-500 text-xs font-bold uppercase tracking-widest mb-1">{sysConfig.schoolName} {sysConfig.deptName}</p>
                         <h2 className="text-2xl font-bold text-green-800 border-l-8 border-green-500 pl-4 flex items-center gap-2">講師領據資料填寫</h2>
@@ -667,7 +686,7 @@
         }
 
         // ==========================================
-        // 管理員儀表板 (已移除密碼，全自動隔離)
+        // 管理員儀表板
         // ==========================================
         function AdminView(props) {
             const { setView, user, appId, targetAdminId, showToast, handleLogout } = props;
@@ -703,7 +722,7 @@
 
             // --- 資料讀取與金鑰解密 ---
             useEffect(() => {
-                if (!user) return; // 權限防護
+                if (!user) return; 
 
                 const unsubConfig = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', `current_${channelId}`), (docSnap) => {
                     if (docSnap.exists()) {
@@ -734,7 +753,7 @@
                 return () => { unsubConfig(); unsubSys(); unsubOptions(); unsubAuth(); unsubInstructors(); };
             }, [appId, channelId, today, user]);
 
-            // 自動解密專屬私鑰 (無密碼版，使用 Google UID 作為對稱解密鑰匙)
+            // 自動解密專屬私鑰 (使用 Google UID 作為對稱解密鑰匙)
             useEffect(() => {
                 if (authConfig.encryptedPrivateKey && user) {
                     try {
@@ -751,7 +770,7 @@
                 return instructorsRaw.map(inst => {
                     if (!inst.payload) return inst;
                     try {
-                        let sessionKey = adminKey; // Fallback for old E2EE
+                        let sessionKey = adminKey;
                         if (inst.e2eeKey) {
                             const decryptor = new window.JSEncrypt();
                             decryptor.setPrivateKey(adminKey);
@@ -775,8 +794,7 @@
             // --- 自動產生 RSA 金鑰 (完全透明化) ---
             useEffect(() => {
                 if (!user) return; // 權限防護
-                // 如果讀取完畢發現沒有公鑰，自動在背景產生並鎖入 Google UID
-                if (authConfig && authConfig.publicKey === undefined) return; // Wait for initial load
+                if (authConfig && authConfig.publicKey === undefined) return; 
                 if (authConfig.publicKey === null && !isGenerating) {
                     setIsGenerating(true);
                     setTimeout(async () => {
@@ -785,7 +803,7 @@
                             crypt.getKey();
                             const pubKey = crypt.getPublicKey();
                             const privKey = crypt.getPrivateKey();
-                            // 用 Google UID 加密私鑰儲存在雲端，確保只有該帳號登入才能解鎖
+                            // 用 Google UID 加密私鑰儲存在雲端
                             const encPrivKey = window.CryptoJS.AES.encrypt(privKey, user.uid).toString();
                             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'config', `auth_${channelId}`), { 
                                 publicKey: pubKey, encryptedPrivateKey: encPrivKey 
@@ -1117,7 +1135,7 @@
                                 <p className="text-xs text-green-600 font-extrabold mt-1">✓ 本機安全自動解密中</p>
                             </div>
                             <div className="flex flex-wrap gap-2 w-full xl:w-auto">
-                                <button onClick={() => { setView('home'); window.location.hash=''; }} className="flex-1 sm:flex-none bg-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-300">🏠 首頁</button>
+                                <button onClick={() => { window.location.hash=''; setView('home'); }} className="flex-1 sm:flex-none bg-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-300">🏠 首頁</button>
                                 <button onClick={handleCopyShareLink} className="flex-1 sm:flex-none bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-indigo-700 animate-pulse">🔗 複製專屬講師連結</button>
                                 <button onClick={handleDownloadTemplate} className="flex-1 sm:flex-none bg-cyan-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-cyan-700 transition-colors">📄 下載範本</button>
                                 <label className="flex-1 sm:flex-none bg-teal-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-teal-700 transition-colors cursor-pointer text-center flex items-center justify-center">
@@ -1234,26 +1252,130 @@
             const [scalePercent, setScalePercent] = useState(85);
             const [marginY, setMarginY] = useState(15);
             const [marginX, setMarginX] = useState(15);
+            const [paperSize, setPaperSize] = useState('a4');
 
-            const handleNativePrint = () => window.print();
+            // 核心 PDF 生成引擎：建立隱藏離線畫布確保絕對不跑版
+            const createPDF = async () => {
+                if (!window.jspdf || !window.html2canvas) {
+                    showToast('PDF 引擎載入中，請稍候再試...');
+                    return null;
+                }
+                
+                // 建立離線畫布容器，避免截圖受到螢幕解析度或捲軸的影響
+                const tempContainer = document.createElement('div');
+                tempContainer.style.position = 'absolute';
+                tempContainer.style.top = '-9999px';
+                tempContainer.style.left = '0';
+                tempContainer.style.width = paperSize === 'a4' ? '210mm' : '176mm';
+                tempContainer.style.background = 'white';
+                
+                const originalPages = document.querySelectorAll('.a4-page');
+                originalPages.forEach(page => {
+                    const clone = page.cloneNode(true);
+                    
+                    // 清理影響截圖的樣式，但「絕對保留」原有的 transform: scale 設定
+                    clone.style.margin = '0';
+                    clone.style.boxShadow = 'none';
+                    
+                    // 移除裁切虛線 (避免出現在正式 PDF 中)
+                    const cutLines = clone.querySelectorAll('.cut-line');
+                    cutLines.forEach(el => el.remove());
+                    
+                    tempContainer.appendChild(clone);
+                });
+                
+                document.body.appendChild(tempContainer);
+                const pdf = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: paperSize });
+
+                try {
+                    const tempPages = tempContainer.childNodes;
+                    for (let i = 0; i < tempPages.length; i++) {
+                        if (i > 0) pdf.addPage();
+                        
+                        // 強制 html2canvas 使用標準寬度擷取，確保所見即所得
+                        const canvas = await window.html2canvas(tempPages[i], { 
+                            scale: 2, 
+                            useCORS: true, 
+                            logging: false, 
+                            backgroundColor: '#ffffff',
+                            windowWidth: tempContainer.scrollWidth 
+                        });
+
+                        const imgData = canvas.toDataURL('image/jpeg', 1.0);
+                        const pdfWidth = pdf.internal.pageSize.getWidth();
+                        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+                    }
+                    return pdf;
+                } catch (error) {
+                    console.error(error);
+                    showToast('❌ PDF 產生失敗，請稍後再試。');
+                    return null;
+                } finally {
+                    if (document.body.contains(tempContainer)) {
+                        document.body.removeChild(tempContainer);
+                    }
+                }
+            };
+
+            // 瀏覽器原生列印：直接產生不跑版的 PDF 並在新分頁彈出觸發列印
+            const handleNativePrint = async () => {
+                showToast('📄 產生高畫質列印檔中，請稍候...');
+                const pdf = await createPDF();
+                if (pdf) {
+                    // 讓 PDF 開啟時自動呼叫列印對話框
+                    pdf.autoPrint({variant: 'non-conform'});
+                    const blob = pdf.output('blob');
+                    const blobUrl = URL.createObjectURL(blob);
+                    const win = window.open(blobUrl);
+                    if (!win) {
+                        showToast('⚠️ 瀏覽器阻擋了彈出視窗，改為直接下載，請開啟檔案後手動列印。');
+                        pdf.save(`講師領據_列印檔.pdf`);
+                    }
+                }
+            };
+
             const pages = []; for(let i = 0; i < instructors.length; i += 2) pages.push(instructors.slice(i, i + 2));
 
             return (
-                <div className="bg-white relative pb-20 print-hide">
-                    <div className="bg-gray-900 text-white p-4 flex flex-col sm:flex-row justify-between items-center sticky top-0 z-[150] shadow-2xl gap-4">
+                <div className="bg-white relative pb-20 print:pb-0">
+                    <div className="bg-gray-900 text-white p-4 flex flex-col sm:flex-row justify-between items-center sticky top-0 z-[150] shadow-2xl gap-4 print:hidden">
                         <div className="flex items-center gap-4">
                             <button onClick={setView} className="text-gray-400 hover:text-white flex items-center gap-1 transition-colors whitespace-nowrap">← 返回</button>
                             <span className="font-bold border-l border-gray-700 pl-4 text-sm truncate">排版並列印 {instructors.length} 張領據</span>
                         </div>
-                        <div className="flex items-center gap-4 w-full sm:w-auto bg-gray-800 p-3 rounded-xl">
-                            <label className="text-xs font-bold text-gray-300">↔️ 左右距: <input type="number" value={marginX} onChange={(e) => setMarginX(parseInt(e.target.value) || 0)} className="w-12 px-1 text-black rounded" /> mm</label>
-                            <label className="text-xs font-bold text-gray-300">↕️ 上下距: <input type="number" value={marginY} onChange={(e) => setMarginY(parseInt(e.target.value) || 0)} className="w-12 px-1 text-black rounded" /> mm</label>
-                            <label className="text-xs font-bold text-gray-300">🔍 縮放: <input type="number" value={scalePercent} onChange={(e) => setScalePercent(parseInt(e.target.value) || 100)} className="w-12 px-1 text-black rounded" /> %</label>
-                            <label className="text-xs font-bold text-gray-300"><input type="checkbox" checked={showSignature} onChange={(e) => setShowSignature(e.target.checked)} className="mr-1"/>簽名</label>
-                            <button onClick={handleNativePrint} className="bg-blue-600 px-4 py-2 rounded-lg font-bold hover:bg-blue-700">🖨️ 直接列印</button>
+                        <div className="flex flex-wrap items-center justify-end gap-x-6 gap-y-3 w-full lg:w-auto bg-gray-800 p-3 rounded-xl shadow-inner">
+                            <div className="flex items-center gap-4 bg-gray-700 px-4 py-2 rounded-lg border border-gray-600 w-full sm:w-auto">
+                                <label className="flex items-center gap-2 text-xs font-bold text-gray-300">
+                                    ↔️ 左右距:
+                                    <input type="range" min="0" max="80" step="1" value={marginX} onChange={(e) => setMarginX(parseFloat(e.target.value))} className="w-16 accent-yellow-400 hidden lg:block" />
+                                    <input type="number" min="0" max="80" value={marginX} onChange={(e) => setMarginX(parseInt(e.target.value) || 0)} className="w-12 px-1 text-center text-black rounded outline-none" /> mm
+                                </label>
+                                <label className="flex items-center gap-2 text-xs font-bold text-gray-300 border-l border-gray-500 pl-4">
+                                    ↕️ 上下距:
+                                    <input type="range" min="0" max="80" step="1" value={marginY} onChange={(e) => setMarginY(parseFloat(e.target.value))} className="w-16 accent-yellow-400 hidden lg:block" />
+                                    <input type="number" min="0" max="80" value={marginY} onChange={(e) => setMarginY(parseInt(e.target.value) || 0)} className="w-12 px-1 text-center text-black rounded outline-none" /> mm
+                                </label>
+                            </div>
+                            <div className="flex items-center gap-4 w-full sm:w-auto">
+                                <label className="flex items-center gap-2 text-xs font-bold text-gray-300">
+                                    🔍 縮放:
+                                    <input type="range" min="50" max="150" step="1" value={scalePercent} onChange={(e) => setScalePercent(parseInt(e.target.value) || 100)} className="w-16 accent-blue-500 hidden sm:block" />
+                                    <input type="number" min="10" max="200" step="1" value={scalePercent} onChange={(e) => setScalePercent(parseInt(e.target.value) || 100)} className="w-12 px-1 text-center text-black rounded outline-none" /> %
+                                </label>
+                                <label className="flex items-center gap-1 cursor-pointer text-xs font-bold text-gray-300 hover:text-white transition-colors border-l border-gray-600 pl-4">
+                                    <input type="checkbox" checked={showSignature} onChange={(e) => setShowSignature(e.target.checked)} className="w-4 h-4 accent-blue-500 cursor-pointer" />
+                                    簽名
+                                </label>
+                            </div>
+                            <div className="flex items-center gap-2 w-full sm:w-auto">
+                                <button onClick={handleNativePrint} className="flex-1 sm:flex-none bg-blue-600 px-4 py-2 rounded-lg font-bold hover:bg-blue-700 shadow-md flex justify-center items-center gap-2 active:scale-95 transition-all text-sm whitespace-nowrap">
+                                    🖨️ 產生 PDF 並列印
+                                </button>
+                            </div>
                         </div>
                     </div>
-                    <div className="w-full flex flex-col items-center py-10 bg-gray-200 min-h-screen">
+                    <div className="w-full flex flex-col items-center py-10 bg-gray-200 min-h-screen print:bg-white print:py-0 print:min-h-0">
                         <div id="print-root" className="w-full mx-auto flex flex-col items-center">
                             {pages.map((pageInstructors, pageIndex) => (
                                 <div key={pageIndex} className="bg-white shadow-2xl mb-8 relative a4-page flex flex-col justify-between"
@@ -1265,7 +1387,7 @@
                                                     <ReceiptTemplate config={config} instructor={instructor} sysConfig={sysConfig} showSignature={showSignature} />
                                                 </div>
                                             </div>
-                                            {itemIndex === 0 && pageInstructors.length > 1 && (<div className="cut-line w-full border-t border-dashed border-gray-400 relative flex items-center justify-center" style={{ height: '0', margin: '2mm 0' }}><span className="absolute bg-white px-2 text-gray-500 text-[10px] tracking-widest">✂️ 裁切線</span></div>)}
+                                            {itemIndex === 0 && pageInstructors.length > 1 && (<div className="cut-line w-full border-t border-dashed border-gray-400 relative flex items-center justify-center print:hidden" style={{ height: '0', margin: '2mm 0' }}><span className="absolute bg-white px-2 text-gray-500 text-[10px] tracking-widest">✂️ 裁切線</span></div>)}
                                         </React.Fragment>
                                     ))}
                                     {pageInstructors.length === 1 && (<div className="flex-1 flex flex-col justify-start items-center overflow-hidden w-full relative"></div>)}

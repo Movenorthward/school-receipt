@@ -2,16 +2,16 @@
 <html lang="zh-TW">
 <!-- 
   =============================================================
-  🏷️ 版本代號：V8-完整修正版
+  🏷️ 版本代號：V9.0-最終發布版 (Master2026-Final-Release)
   
-  【核心更新紀錄】
-  1. 原生透明修復：移除 mixBlendMode，徹底解決 PDF 列印出現白底方塊的問題。
-  2. 簽名檔自動去背：改用真正的透明背景 (image/png) 消除列印白塊。
-  3. 浮空簽名定位：簽名圖片採絕對定位，放大也不會撐破領據表格。
-  4. 直覺式拖曳排版：點擊簽名即可彈出調整視窗，支援拖曳與縮放。
-  5. 記憶路由防呆：加入 Session 暫存，解決手機跳轉登入後遺失代碼的 Bug。
-  6. PDF 直出引擎：列印採用隱形 A4 畫布轉換，確保 100% 絕對不跑版。
-  7. 管理員識別列：加入頂端包含 Google 頭像與安全頻道的專屬導覽列。
+  【系統核心亮點】
+  1. 原生透明去背：簽名檔採用原生透明 (PNG)，徹底解決 PDF 列印白塊。
+  2. 浮空簽名定位：簽名圖片採絕對定位，可自由放大且不撐破領據表格。
+  3. 直覺式拖曳排版：點擊簽名即可彈出調整視窗，支援滑鼠拖曳與拉桿縮放。
+  4. 記憶路由防呆：加入 Session 暫存，解決手機 LINE 跳轉登入遺失代碼的 Bug。
+  5. PDF 直出引擎：列印採用隱形 A4 畫布轉換，確保 100% 絕對不跑版。
+  6. 管理員識別列：加入頂端包含 Google 頭像與安全頻道的專屬導覽列。
+  7. 端到端加密 (E2EE)：講師端直接鎖定個資，僅承辦人專屬金鑰可解密。
   =============================================================
 -->
 <head>
@@ -568,7 +568,7 @@
                         {view === 'admin' && <AdminView setView={setView} user={user} appId={MY_PROJECT_ID} targetAdminId={targetAdminId} showToast={showToast} />}
                         {view === 'instructor' && <InstructorView setView={setView} user={user} appId={MY_PROJECT_ID} targetAdminId={targetAdminId} showToast={showToast} />}
                     </div>
-                    <div className="text-center text-gray-400 text-sm py-4 print-hide font-bold">@2026 Master (版本：V8)</div>
+                    <div className="text-center text-gray-400 text-sm py-4 print-hide font-bold">@2026 Master (版本：V9)</div>
                     <Toast message={toastMsg} onClose={() => setToastMsg('')} />
                 </div>
             );

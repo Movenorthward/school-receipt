@@ -38,27 +38,25 @@
         </div>
     </div>
     <script>
-      window.addEventListener('error', function (event) {
+      window.__firebaseReadyPromise = Promise.all([
+        import('https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js'),
+        import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js'),
+        import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js')
+      ]).then(([appModule, authModule, firestoreModule]) => ({
+        ...appModule, ...authModule, ...firestoreModule
+      }));
+
+      window.addEventListener('unhandledrejection', function (event) {
         const root = document.getElementById('root');
-        if (!root) return;
-        root.innerHTML = '<div style="padding:40px;text-align:center;font-family:Arial;color:#b91c1c"><h2>網站載入失敗</h2><p>' + (event.message || '外部程式載入失敗') + '</p></div>';
+        const reason = event.reason;
+        const message = reason && (reason.stack || reason.message) ? (reason.stack || reason.message) : String(reason || '未知錯誤');
+        if (root) root.innerHTML = '<div style="padding:32px;font-family:Arial;color:#991b1b;white-space:pre-wrap"><h2>網站模組載入失敗</h2><p>' + message.replace(/</g, '&lt;') + '</p></div>';
       });
-      setTimeout(function () {
-        const missing = [];
-        if (typeof React === 'undefined') missing.push('React');
-        if (typeof ReactDOM === 'undefined') missing.push('ReactDOM');
-        if (typeof Babel === 'undefined') missing.push('Babel');
-        if (missing.length) {
-          const root = document.getElementById('root');
-          root.innerHTML = '<div style="padding:40px;text-align:center;font-family:Arial;color:#b91c1c"><h2>核心模組載入失敗</h2><p>缺少：' + missing.join(', ') + '</p></div>';
-        }
-      }, 8000);
     </script>
 
-    <script type="text/babel" data-type="module" data-presets="react">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
-        import { getAuth, onAuthStateChanged, signInWithCustomToken, signInAnonymously, GoogleAuthProvider, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
-        import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, addDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+    <script type="text/babel" data-presets="react">
+        window.__firebaseReadyPromise.then((firebaseModules) => {
+        const { initializeApp, getAuth, onAuthStateChanged, signInWithCustomToken, signInAnonymously, GoogleAuthProvider, signInWithPopup, signOut, getFirestore, collection, doc, setDoc, getDoc, onSnapshot, addDoc, deleteDoc } = firebaseModules;
 
         const { useState, useEffect, useRef, useMemo } = React;
 
@@ -1609,6 +1607,11 @@
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
+        }).catch((error) => {
+            const root = document.getElementById('root');
+            const message = error && (error.stack || error.message) ? (error.stack || error.message) : String(error);
+            root.innerHTML = `<div style="padding:32px;font-family:Arial;color:#991b1b;white-space:pre-wrap"><h2>Firebase 模組載入失敗</h2><p>${message}</p></div>`;
+        });
     </script>
 </body>
 </html>

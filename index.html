@@ -19,19 +19,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- 基礎 XSS 防護 -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: wss: data: blob:;">
-    <title>經費領據管理系統 (V8)</title>
+    <title>經費領據管理系統（診斷版 2026-06-24）</title>
     
     <!-- 載入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- 載入 React 核心庫 -->
-    <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
     
     <!-- 載入 Babel Standalone 用於在瀏覽器即時編譯 JSX -->
     <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
 </head>
 <body class="m-0 p-0 text-gray-900 bg-gray-50">
+    <div id="deploy-marker" style="position:fixed;right:8px;bottom:8px;z-index:99999;font:12px Arial;color:#64748b;background:#fff;padding:4px 8px;border:1px solid #cbd5e1;border-radius:6px">診斷版 2026-06-24</div>
     <div id="root">
         <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif;color:#475569;background:#f8fafc;">
             系統載入中，若長時間沒有顯示，請重新整理頁面。
@@ -47,10 +48,12 @@
       }));
 
       window.addEventListener('unhandledrejection', function (event) {
+        console.error('Unhandled promise rejection:', event.reason);
         const root = document.getElementById('root');
+        if (!root || !root.textContent.includes('系統載入中')) return;
         const reason = event.reason;
         const message = reason && (reason.stack || reason.message) ? (reason.stack || reason.message) : String(reason || '未知錯誤');
-        if (root) root.innerHTML = '<div style="padding:32px;font-family:Arial;color:#991b1b;white-space:pre-wrap"><h2>網站模組載入失敗</h2><p>' + message.replace(/</g, '&lt;') + '</p></div>';
+        root.innerHTML = '<div style="padding:32px;font-family:Arial;color:#991b1b;white-space:pre-wrap"><h2>網站模組載入失敗</h2><p>' + message.replace(/</g, '&lt;') + '</p><p>版本：診斷版 2026-06-24</p></div>';
       });
     </script>
 

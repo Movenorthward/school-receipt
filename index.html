@@ -19,26 +19,48 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- 基礎 XSS 防護 -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: wss: data: blob:;">
-    <title>經費領據管理系統（診斷版 2026-06-24）</title>
+    <title>經費領據管理系統（CDN 診斷版 2026-06-24）</title>
     
     <!-- 載入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- 載入 React 核心庫 -->
-    <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
     
     <!-- 載入 Babel Standalone 用於在瀏覽器即時編譯 JSX -->
-    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.5/babel.min.js"></script>
 </head>
 <body class="m-0 p-0 text-gray-900 bg-gray-50">
-    <div id="deploy-marker" style="position:fixed;right:8px;bottom:8px;z-index:99999;font:12px Arial;color:#64748b;background:#fff;padding:4px 8px;border:1px solid #cbd5e1;border-radius:6px">診斷版 2026-06-24</div>
+    <div id="deploy-marker" style="position:fixed;right:8px;bottom:8px;z-index:99999;font:12px Arial;color:#64748b;background:#fff;padding:4px 8px;border:1px solid #cbd5e1;border-radius:6px">CDN 診斷版 2026-06-24</div>
     <div id="root">
         <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif;color:#475569;background:#f8fafc;">
             系統載入中，若長時間沒有顯示，請重新整理頁面。
         </div>
     </div>
     <script>
+      window.addEventListener('error', function (event) {
+        const root = document.getElementById('root');
+        if (!root || !root.textContent.includes('系統載入中')) return;
+        const message = event.message || '未知 JavaScript 錯誤';
+        const source = event.filename ? ('\n來源：' + event.filename + ':' + event.lineno + ':' + event.colno) : '';
+        root.innerHTML = '<div style="padding:32px;font-family:Arial;color:#991b1b;white-space:pre-wrap"><h2>JavaScript 載入或編譯失敗</h2><p>' + (message + source).replace(/</g, '&lt;') + '</p><p>版本：CDN CDN 診斷版 2026-06-24</p></div>';
+      }, true);
+
+      setTimeout(function () {
+        const root = document.getElementById('root');
+        if (!root || !root.textContent.includes('系統載入中')) return;
+        const missing = [];
+        if (typeof React === 'undefined') missing.push('React');
+        if (typeof ReactDOM === 'undefined') missing.push('ReactDOM');
+        if (typeof Babel === 'undefined') missing.push('Babel');
+        if (missing.length) {
+          root.innerHTML = '<div style="padding:32px;font-family:Arial;color:#991b1b"><h2>核心模組載入失敗</h2><p>缺少：' + missing.join(', ') + '</p><p>請確認學校網路或瀏覽器是否阻擋 cdnjs.cloudflare.com。</p></div>';
+        } else {
+          root.innerHTML = '<div style="padding:32px;font-family:Arial;color:#991b1b"><h2>JSX 沒有成功執行</h2><p>React、ReactDOM、Babel 已載入，但主程式未完成編譯或執行。請按 F12 查看 Console 第一個紅色錯誤。</p></div>';
+        }
+      }, 8000);
+
       window.__firebaseReadyPromise = Promise.all([
         import('https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js'),
         import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js'),
@@ -53,11 +75,11 @@
         if (!root || !root.textContent.includes('系統載入中')) return;
         const reason = event.reason;
         const message = reason && (reason.stack || reason.message) ? (reason.stack || reason.message) : String(reason || '未知錯誤');
-        root.innerHTML = '<div style="padding:32px;font-family:Arial;color:#991b1b;white-space:pre-wrap"><h2>網站模組載入失敗</h2><p>' + message.replace(/</g, '&lt;') + '</p><p>版本：診斷版 2026-06-24</p></div>';
+        root.innerHTML = '<div style="padding:32px;font-family:Arial;color:#991b1b;white-space:pre-wrap"><h2>網站模組載入失敗</h2><p>' + message.replace(/</g, '&lt;') + '</p><p>版本：CDN 診斷版 2026-06-24</p></div>';
       });
     </script>
 
-    <script type="text/babel" data-presets="react">
+    <script type="text/babel" data-presets="react" data-type="module">
         window.__firebaseReadyPromise.then((firebaseModules) => {
         const { initializeApp, getAuth, onAuthStateChanged, signInWithCustomToken, signInAnonymously, GoogleAuthProvider, signInWithPopup, signOut, getFirestore, collection, doc, setDoc, getDoc, onSnapshot, addDoc, deleteDoc } = firebaseModules;
 

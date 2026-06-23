@@ -25,14 +25,35 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- 載入 React 核心庫 -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
     
     <!-- 載入 Babel Standalone 用於在瀏覽器即時編譯 JSX -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
 </head>
 <body class="m-0 p-0 text-gray-900 bg-gray-50">
-    <div id="root"></div>
+    <div id="root">
+        <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif;color:#475569;background:#f8fafc;">
+            系統載入中，若長時間沒有顯示，請重新整理頁面。
+        </div>
+    </div>
+    <script>
+      window.addEventListener('error', function (event) {
+        const root = document.getElementById('root');
+        if (!root) return;
+        root.innerHTML = '<div style="padding:40px;text-align:center;font-family:Arial;color:#b91c1c"><h2>網站載入失敗</h2><p>' + (event.message || '外部程式載入失敗') + '</p></div>';
+      });
+      setTimeout(function () {
+        const missing = [];
+        if (typeof React === 'undefined') missing.push('React');
+        if (typeof ReactDOM === 'undefined') missing.push('ReactDOM');
+        if (typeof Babel === 'undefined') missing.push('Babel');
+        if (missing.length) {
+          const root = document.getElementById('root');
+          root.innerHTML = '<div style="padding:40px;text-align:center;font-family:Arial;color:#b91c1c"><h2>核心模組載入失敗</h2><p>缺少：' + missing.join(', ') + '</p></div>';
+        }
+      }, 8000);
+    </script>
 
     <script type="text/babel" data-type="module" data-presets="react">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
@@ -361,7 +382,7 @@
         // ==========================================
         // 主程式 App
         // ==========================================
-        export default function App() {
+        function App() {
             const [user, setUser] = useState(null);
             const [isAppReady, setIsAppReady] = useState(false);
             const [toastMsg, setToastMsg] = useState('');

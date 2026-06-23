@@ -2,16 +2,13 @@
 <html lang="zh-TW">
 <!-- 
   =============================================================
-  🏷️ 版本代號：V9.0-最終發布版 (Master2026-Final-Release)
+  🏷️ 版本代號：V9.1-效能與體驗優化版 (Master2026-Final-Release)
   
-  【系統核心亮點】
-  1. 原生透明去背：簽名檔採用原生透明 (PNG)，徹底解決 PDF 列印白塊。
-  2. 浮空簽名定位：簽名圖片採絕對定位，可自由放大且不撐破領據表格。
-  3. 直覺式拖曳排版：點擊簽名即可彈出調整視窗，支援滑鼠拖曳與拉桿縮放。
-  4. 記憶路由防呆：加入 Session 暫存，解決手機 LINE 跳轉登入遺失代碼的 Bug。
-  5. PDF 直出引擎：列印採用隱形 A4 畫布轉換，確保 100% 絕對不跑版。
-  6. 管理員識別列：加入頂端包含 Google 頭像與安全頻道的專屬導覽列。
-  7. 端到端加密 (E2EE)：講師端直接鎖定個資，僅承辦人專屬金鑰可解密。
+  【V9.1 優化亮點】
+  1. 智慧日期：自動抓取當天真實民國年月日，免去手動修改。
+  2. 效能防呆：PDF與ZIP產生時加入按鈕鎖定機制，防止狂點當機。
+  3. 智慧檔名：匯出檔案自動附加日期時間戳，避免備份覆蓋。
+  4. 簽名優化：強化手機端 touch-action 鎖死，確保簽名不滑動。
   =============================================================
 -->
 <head>
@@ -19,82 +16,49 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- 基礎 XSS 防護 -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: wss: data: blob:;">
-    <title>經費領據管理系統（V9.0）</title>
+    <title>經費領據管理系統 (V9.1-效能優化版)</title>
     
     <!-- 載入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- 載入 React 核心庫 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+    <!-- 🔥 載入 Import Map 解決 ES Module 解析問題 -->
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+        "react/jsx-runtime": "https://esm.sh/react@18.2.0/jsx-runtime"
+      }
+    }
+    </script>
     
     <!-- 載入 Babel Standalone 用於在瀏覽器即時編譯 JSX -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.5/babel.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        /* 強制鎖死簽名板的觸控預設行為 */
+        .signature-canvas { touch-action: none !important; overscroll-behavior: none; }
+    </style>
 </head>
 <body class="m-0 p-0 text-gray-900 bg-gray-50">
-    <div id="deploy-marker" style="position:fixed;right:8px;bottom:8px;z-index:99999;font:12px Arial;color:#64748b;background:#fff;padding:4px 8px;border:1px solid #cbd5e1;border-radius:6px">CDN 診斷版 2026-06-24</div>
-    <div id="root">
-        <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif;color:#475569;background:#f8fafc;">
-            系統載入中，若長時間沒有顯示，請重新整理頁面。
-        </div>
-    </div>
-    <script>
-      window.addEventListener('error', function (event) {
-        const root = document.getElementById('root');
-        if (!root || !root.textContent.includes('系統載入中')) return;
-        const message = event.message || '未知 JavaScript 錯誤';
-        const source = event.filename ? ('\n來源：' + event.filename + ':' + event.lineno + ':' + event.colno) : '';
-        root.innerHTML = '<div style="padding:32px;font-family:Arial;color:#991b1b;white-space:pre-wrap"><h2>JavaScript 載入或編譯失敗</h2><p>' + (message + source).replace(/</g, '&lt;') + '</p><p>版本：CDN CDN 診斷版 2026-06-24</p></div>';
-      }, true);
+    <div id="root"></div>
 
-      setTimeout(function () {
-        const root = document.getElementById('root');
-        if (!root || !root.textContent.includes('系統載入中')) return;
-        const missing = [];
-        if (typeof React === 'undefined') missing.push('React');
-        if (typeof ReactDOM === 'undefined') missing.push('ReactDOM');
-        if (typeof Babel === 'undefined') missing.push('Babel');
-        if (missing.length) {
-          root.innerHTML = '<div style="padding:32px;font-family:Arial;color:#991b1b"><h2>核心模組載入失敗</h2><p>缺少：' + missing.join(', ') + '</p><p>請確認學校網路或瀏覽器是否阻擋 cdnjs.cloudflare.com。</p></div>';
-        } else {
-          root.innerHTML = '<div style="padding:32px;font-family:Arial;color:#991b1b"><h2>JSX 沒有成功執行</h2><p>React、ReactDOM、Babel 已載入，但主程式未完成編譯或執行。請按 F12 查看 Console 第一個紅色錯誤。</p></div>';
-        }
-      }, 8000);
+    <script type="text/babel" data-type="module" data-presets="react">
+        import React, { useState, useEffect, useRef, useMemo } from 'react';
+        import { createRoot } from 'react-dom/client';
+        
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+        import { getAuth, onAuthStateChanged, signInWithCustomToken, signInAnonymously, GoogleAuthProvider, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+        import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, addDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
-      window.__firebaseReadyPromise = Promise.all([
-        import('https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js'),
-        import('https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js'),
-        import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js')
-      ]).then(([appModule, authModule, firestoreModule]) => ({
-        ...appModule, ...authModule, ...firestoreModule
-      }));
-
-      window.addEventListener('unhandledrejection', function (event) {
-        console.error('Unhandled promise rejection:', event.reason);
-        const root = document.getElementById('root');
-        if (!root || !root.textContent.includes('系統載入中')) return;
-        const reason = event.reason;
-        const message = reason && (reason.stack || reason.message) ? (reason.stack || reason.message) : String(reason || '未知錯誤');
-        root.innerHTML = '<div style="padding:32px;font-family:Arial;color:#991b1b;white-space:pre-wrap"><h2>網站模組載入失敗</h2><p>' + message.replace(/</g, '&lt;') + '</p><p>版本：CDN 診斷版 2026-06-24</p></div>';
-      });
-    </script>
-
-    <script type="text/babel" data-presets="react" data-type="module">
-        window.__firebaseReadyPromise.then((firebaseModules) => {
-        const { initializeApp, getAuth, onAuthStateChanged, signInWithCustomToken, signInAnonymously, GoogleAuthProvider, signInWithPopup, signOut, getFirestore, collection, doc, setDoc, getDoc, onSnapshot, addDoc, deleteDoc } = firebaseModules;
-
-        const { useState, useEffect, useRef, useMemo } = React;
-
-        // ==========================================
-        // 🔥 系統主 ID (基礎)
-        // ==========================================
+        // 系統主 ID
         const MY_PROJECT_ID = typeof __app_id !== 'undefined' ? __app_id : "Taiwan-Teachers-Secure-Receipt"; 
 
         // ==========================================
         // ⚠️ 請在此處填入您的 Firebase 設定
         // ==========================================
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-          apiKey: "AIzaSyAeJVFba8QO4jY7-FiYZ7AwFqAnLSSOpes",
+              apiKey: "AIzaSyAeJVFba8QO4jY7-FiYZ7AwFqAnLSSOpes",
   authDomain: "schoolreceipt.firebaseapp.com",
   databaseURL: "https://schoolreceipt-default-rtdb.firebaseio.com",
   projectId: "schoolreceipt",
@@ -106,14 +70,14 @@
 
         // 防呆機制
         if (!firebaseConfig.apiKey && typeof __firebase_config === 'undefined') {
-            const root = ReactDOM.createRoot(document.getElementById('root'));
+            const root = createRoot(document.getElementById('root'));
             root.render(
                 <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gray-100 print:hidden">
                     <div className="bg-white p-8 rounded-3xl shadow-2xl max-w-lg w-full border-t-8 border-red-500 text-center animate-in zoom-in-95">
                         <h1 className="text-5xl mb-4">⚠️</h1>
                         <h2 className="text-2xl font-bold text-red-600 mb-4">尚未設定 Firebase 金鑰</h2>
                         <div className="text-gray-600 text-left space-y-2 bg-red-50 p-5 rounded-xl border border-red-100 text-sm leading-relaxed">
-                            <p className="font-bold text-red-800">請用記事本打開 index.html，在第 28 行填入 Firebase 金鑰！</p>
+                            <p className="font-bold text-red-800">請用記事本打開 index.html，在第 47 行填入 Firebase 金鑰！</p>
                         </div>
                     </div>
                 </div>
@@ -205,7 +169,6 @@
                             canvas.height = img.height * scaleSize;
                             const ctx = canvas.getContext('2d');
                             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                            // 🔥 去背修正：確保 PNG 上傳時不被強制轉存成不支援透明的 JPEG
                             const mimeType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
                             const quality = mimeType === 'image/jpeg' ? 0.4 : undefined;
                             const dataUrl = canvas.toDataURL(mimeType, quality);
@@ -217,6 +180,17 @@
                 };
                 reader.onerror = error => reject(error);
             });
+        };
+
+        // 🔥 優化 1：獲取今天真實的民國年月日
+        const getTodayTW = () => {
+            const d = new Date();
+            return {
+                year: (d.getFullYear() - 1911).toString(),
+                month: String(d.getMonth() + 1).padStart(2, '0'),
+                day: String(d.getDate()).padStart(2, '0'),
+                iso: d.toISOString().split('T')[0]
+            };
         };
 
         function Toast({ message, onClose }) {
@@ -235,9 +209,6 @@
             );
         }
 
-        // ==========================================
-        // 🔥 直覺式簽名拖曳與縮放視窗元件
-        // ==========================================
         const SignatureAdjustModal = ({ instructor, initialTransform, onSave, onClose }) => {
             const [transform, setTransform] = useState(initialTransform || { x: 120, y: -10, width: 140 });
             const [isDragging, setIsDragging] = useState(false);
@@ -405,26 +376,22 @@
         // ==========================================
         // 主程式 App
         // ==========================================
-        function App() {
+        export default function App() {
             const [user, setUser] = useState(null);
             const [isAppReady, setIsAppReady] = useState(false);
             const [toastMsg, setToastMsg] = useState('');
             const showToast = (msg) => setToastMsg(msg);
             
-            // 核心狀態：頻道 ID 與 視窗狀態
             const [targetAdminId, setTargetAdminId] = useState('');
             const [view, setView] = useState('home'); 
 
-            // 用來儲存當前登入者是否已有專屬單位的狀態，用於客製化首頁標題
             const [homeSysConfig, setHomeSysConfig] = useState(null);
 
-            // 動態 App ID，實現頻道隔離
             const dynamicAppId = useMemo(() => {
                 const baseId = typeof __app_id !== 'undefined' ? __app_id : "Taiwan-Teachers-Secure-Receipt";
                 return targetAdminId ? `${baseId}-${targetAdminId}` : baseId;
             }, [targetAdminId]);
 
-            // 1. 初始化資源與 Firebase Auth 
             useEffect(() => {
                 const loadScripts = async () => {
                     const scripts = [
@@ -473,11 +440,9 @@
                 return () => unsubscribe();
             }, []);
 
-            // 2. 路由控制與瀏覽器暫存還原
             useEffect(() => {
                 const handleRouting = () => {
                     let hash = window.location.hash.substring(1);
-                    
                     if (!hash) {
                         const savedHash = sessionStorage.getItem('receipt_channel');
                         if (savedHash) {
@@ -502,7 +467,6 @@
                 return () => window.removeEventListener('hashchange', handleRouting);
             }, []);
 
-            // 3. 背景查詢是否已經設定過單位名稱
             useEffect(() => {
                 if (!user || user.isAnonymous) {
                     setHomeSysConfig(null);
@@ -557,7 +521,6 @@
                 </div>
             );
 
-            // 🌟 強制 Google 實名登入閘門
             if (!user && targetAdminId) return (
                 <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4 print:hidden">
                     <div className="bg-white p-10 rounded-3xl shadow-2xl max-w-md w-full text-center border-t-8 border-blue-500 animate-in zoom-in-95">
@@ -612,7 +575,7 @@
                         {view === 'admin' && <AdminView setView={setView} user={user} appId={MY_PROJECT_ID} targetAdminId={targetAdminId} showToast={showToast} />}
                         {view === 'instructor' && <InstructorView setView={setView} user={user} appId={MY_PROJECT_ID} targetAdminId={targetAdminId} showToast={showToast} />}
                     </div>
-                    <div className="text-center text-gray-400 text-sm py-4 print-hide font-bold">@2026 Master (版本：V9)</div>
+                    <div className="text-center text-gray-400 text-sm py-4 print-hide font-bold">@2026 Master (版本：V9.1-效能優化版)</div>
                     <Toast message={toastMsg} onClose={() => setToastMsg('')} />
                 </div>
             );
@@ -623,8 +586,9 @@
         // ==========================================
         function InstructorView({ setView, user, appId, targetAdminId, showToast }) {
             const channelId = targetAdminId || 'default';
-            const today = new Date().toISOString().split('T')[0];
-            const [config, setConfig] = useState({ activityName: "載入中...", schoolName: "載入中...", year: "115", month: "05", day: "12", items: [] });
+            const todayData = getTodayTW(); // 🔥 抓取當天真實日期
+            
+            const [config, setConfig] = useState({ activityName: "載入中...", schoolName: "載入中...", year: todayData.year, month: todayData.month, day: todayData.day, items: [] });
             const [sysConfig, setSysConfig] = useState({ schoolName: '載入中...', deptName: '' });
             const [authConfig, setAuthConfig] = useState({ publicKey: null });
             
@@ -642,7 +606,16 @@
                 if (!user) return; 
 
                 const unsubConfig = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', `current_${channelId}`), (docSnap) => {
-                    if (docSnap.exists()) setConfig(docSnap.data());
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        // 確保如果承辦人沒有存過日期，就用當天日期
+                        setConfig({
+                            ...data,
+                            year: data.year || todayData.year,
+                            month: data.month || todayData.month,
+                            day: data.day || todayData.day
+                        });
+                    }
                 }, (err) => console.error("config snapshot error:", err));
                 
                 const unsubSys = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', `system_${channelId}`), (docSnap) => {
@@ -755,8 +728,8 @@
                         </div>
                         <div className="flex flex-col gap-4">
                             <button onClick={() => setStep('form')} className="w-full py-4 bg-gray-500 text-white font-bold rounded-2xl hover:bg-gray-600 shadow-md">✏️ 返回修改</button>
-                            <button onClick={processAutoEncryptSubmit} disabled={isSubmitting || !authConfig.publicKey} className={`w-full py-4 font-bold rounded-2xl text-white shadow-lg transition-all text-xl ${isSubmitting || !authConfig.publicKey ? 'bg-gray-300' : 'bg-green-600 hover:bg-green-700'}`}>
-                                {isSubmitting ? '加密上傳中...' : '🚀 確認無誤，線上自動送出'}
+                            <button onClick={processAutoEncryptSubmit} disabled={isSubmitting || !authConfig.publicKey} className={`w-full py-4 font-bold rounded-2xl text-white shadow-lg transition-all text-xl flex justify-center items-center ${isSubmitting || !authConfig.publicKey ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 active:scale-95'}`}>
+                                {isSubmitting ? <span className="flex items-center gap-2"><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> 處理中...</span> : '🚀 確認無誤，線上自動送出'}
                             </button>
                         </div>
                     </div>
@@ -835,7 +808,8 @@
                             <div className="bg-white w-full max-w-lg p-6 rounded-3xl flex flex-col h-[70vh] shadow-2xl">
                                 <h3 className="text-xl font-bold mb-4 text-center text-gray-800 shrink-0">手寫簽名區域</h3>
                                 <div className="border-4 border-gray-100 flex-1 relative bg-white overflow-hidden rounded-2xl">
-                                    <canvas ref={canvasRef} className="absolute inset-0 w-full h-full cursor-crosshair" style={{ touchAction: 'none' }} onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseOut={stopDrawing} onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing}></canvas>
+                                    {/* 🔥 優化：加入 signature-canvas 類別強化 CSS 防呆 */}
+                                    <canvas ref={canvasRef} className="signature-canvas absolute inset-0 w-full h-full cursor-crosshair" onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseOut={stopDrawing} onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing}></canvas>
                                 </div>
                                 <div className="flex gap-4 mt-6 shrink-0">
                                     <button onClick={clearSignature} className="flex-1 bg-red-50 text-red-600 py-4 rounded-2xl font-bold text-lg">清除</button>
@@ -854,10 +828,10 @@
         function AdminView(props) {
             const { setView, user, appId, targetAdminId, showToast } = props;
             const channelId = targetAdminId || 'default';
-            const today = new Date().toISOString().split('T')[0];
+            const todayData = getTodayTW(); // 🔥 抓取當天真實日期
             
-            // 資料狀態
-            const [config, setConfig] = useState({ activityName: "114學年度國民中小學雙語生活化校園計畫－諮詢費", schoolName: "基隆市立成功國民中學", year: "115", month: "05", day: "12", items: [] });
+            // 資料狀態 (預設帶入今天日期)
+            const [config, setConfig] = useState({ activityName: "114學年度國民中小學雙語生活化校園計畫－諮詢費", schoolName: "基隆市立成功國民中學", year: todayData.year, month: todayData.month, day: todayData.day, items: [] });
             const [sysConfig, setSysConfig] = useState({ schoolName: '基隆市立成功國民中學', deptName: '教務處' });
             const [itemOptions, setItemOptions] = useState(["鐘點費", "諮詢費", "交通費", "出席費"]);
             const [instructorsRaw, setInstructorsRaw] = useState([]);
@@ -883,6 +857,14 @@
             const [imageOffsetY, setImageOffsetY] = useState(0);
             const [deleteConfirmId, setDeleteConfirmId] = useState(null);
             const [isClearModalOpen, setIsClearModalOpen] = useState(false);
+            
+            // 編輯表單狀態
+            const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+            const [editFormData, setEditFormData] = useState(null);
+
+            // 🔥 新增：載入中狀態防連點
+            const [isProcessingZip, setIsProcessingZip] = useState(false);
+            const [isProcessingPdf, setIsProcessingPdf] = useState(false);
 
             // --- 資料讀取與金鑰解密 ---
             useEffect(() => {
@@ -891,8 +873,13 @@
                 const unsubConfig = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'config', `current_${channelId}`), (docSnap) => {
                     if (docSnap.exists()) {
                         let data = docSnap.data();
-                        if (!data.items && data.itemName) data.items = [{ itemName: data.itemName, itemDate: today, startTime: "11:00", endTime: "13:00", qty: data.qty, price: data.price, remark: "" }];
-                        setConfig(data);
+                        if (!data.items && data.itemName) data.items = [{ itemName: data.itemName, itemDate: todayData.iso, startTime: "11:00", endTime: "13:00", qty: data.qty, price: data.price, remark: "" }];
+                        setConfig({
+                            ...data,
+                            year: data.year || todayData.year,
+                            month: data.month || todayData.month,
+                            day: data.day || todayData.day
+                        });
                     }
                 }, (err) => console.error("config snapshot error:", err));
                 
@@ -923,7 +910,7 @@
                 }, (err) => console.error("instructors snapshot error:", err));
                 
                 return () => { unsubConfig(); unsubSys(); unsubOptions(); unsubAuth(); unsubInstructors(); };
-            }, [appId, channelId, today, user]);
+            }, [appId, channelId, user]);
 
             useEffect(() => {
                 if (authConfig.encryptedPrivateKey && user) {
@@ -1119,6 +1106,24 @@
                 } catch (error) { showToast('失敗'); }
             };
 
+            const handleAdminEditSubmit = async (e) => {
+                e.preventDefault();
+                try {
+                    const { id, createdAt, decryptionFailed, ...fullData } = editFormData;
+                    const sessionKey = generateRandomKey();
+                    const newEncryptedPayload = window.CryptoJS.AES.encrypt(JSON.stringify(fullData), sessionKey).toString();
+                    const encryptor = new window.JSEncrypt(); encryptor.setPublicKey(authConfig.publicKey);
+                    const newEncryptedSessionKey = encryptor.encrypt(sessionKey);
+
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', `instructors_${channelId}`, id), { 
+                        name: fullData.name, payload: newEncryptedPayload, e2eeKey: newEncryptedSessionKey 
+                    }, { merge: true });
+                    
+                    showToast('✅ 資料已更新並重新加密儲存！'); 
+                    setIsEditModalOpen(false);
+                } catch (error) { showToast('❌ 更新失敗'); }
+            };
+
             const handleQuickUpload = async (instructorId, field, e) => {
                 const file = e.target.files[0]; if (!file) return;
                 try {
@@ -1220,15 +1225,21 @@
                 e.target.value = '';
             };
 
-            const addItem = () => setConfig({ ...config, items: [...(config.items || []), { itemName: '', itemDate: today, startTime: '', endTime: '', qty: 1, price: 1000, remark: '' }] });
+            const addItem = () => setConfig({ ...config, items: [...(config.items || []), { itemName: '', itemDate: todayData.iso, startTime: '', endTime: '', qty: 1, price: 1000, remark: '' }] });
             const removeItem = (idx) => setConfig({ ...config, items: config.items.filter((_, i) => i !== idx) });
             const updateItem = (idx, field, val) => { const newItems = [...config.items]; newItems[idx][field] = val; setConfig({ ...config, items: newItems }); };
             const grandTotal = config.items ? config.items.reduce((s, i) => s + (i.qty * i.price), 0) : 0;
 
+            // 🔥 優化 2 & 3：加入打包下載處理狀態，避免連點，並動態附加日期
             const handleBatchDownload = async () => {
+                if (isProcessingZip) return;
                 if (!window.JSZip || !window.XLSX || !window.saveAs) return showToast("套件載入中...");
                 const validData = decryptedInstructors.filter(i => !i.decryptionFailed);
                 if (validData.length === 0) return showToast("沒有資料可匯出。");
+                
+                setIsProcessingZip(true);
+                showToast("📦 資料打包中，請稍候...");
+                
                 try {
                     const zip = new window.JSZip();
                     const sheetData = validData.map(i => ({
@@ -1245,9 +1256,15 @@
                         if (i.passbookUrl) passFolder.file(`${i.name}_存摺.jpg`, i.passbookUrl.split(',')[1], { base64: true });
                     });
                     const content = await zip.generateAsync({ type: "blob" });
-                    window.saveAs(content, `核銷資料_${sysConfig.deptName}.zip`);
+                    
+                    const dateStamp = new Date().toISOString().split('T')[0].replace(/-/g, '');
+                    window.saveAs(content, `核銷資料_${sysConfig.deptName}_${dateStamp}.zip`);
                     showToast('✅ 下載成功');
-                } catch (e) { showToast('匯出失敗'); }
+                } catch (e) { 
+                    showToast('匯出失敗'); 
+                } finally {
+                    setIsProcessingZip(false);
+                }
             };
 
             const createImagePDF = async () => {
@@ -1277,15 +1294,32 @@
                 } catch (error) { return null; } finally { if (document.body.contains(tempContainer)) document.body.removeChild(tempContainer); }
             };
 
+            // 🔥 優化 2 & 3：圖檔預覽列印加入防狂點與動態檔名
             const handleNativeImagePrint = async () => {
-                showToast('📄 處理中...'); const pdf = await createImagePDF();
-                if (pdf) { pdf.autoPrint({variant: 'non-conform'}); const blobUrl = URL.createObjectURL(pdf.output('blob')); const win = window.open(blobUrl); if (!win) pdf.save(`圖檔.pdf`); }
+                if (isProcessingPdf) return;
+                setIsProcessingPdf(true);
+                showToast('📄 處理中，請稍候...'); 
+                
+                try {
+                    const pdf = await createImagePDF();
+                    if (pdf) { 
+                        pdf.autoPrint({variant: 'non-conform'}); 
+                        const blobUrl = URL.createObjectURL(pdf.output('blob')); 
+                        const win = window.open(blobUrl); 
+                        if (!win) {
+                            const dateStamp = new Date().toISOString().split('T')[0].replace(/-/g, '');
+                            pdf.save(`圖檔_${dateStamp}.pdf`); 
+                        }
+                    }
+                } finally {
+                    setIsProcessingPdf(false);
+                }
             };
 
             return (
                 <div className="max-w-7xl mx-auto my-4 sm:my-8 p-4 flex flex-col gap-6 print-hide">
                     
-                    {/* 🔥 新增：管理員專屬身分識別列 (顯示 Google 頭貼與帳號) */}
+                    {/* 管理員專屬身分識別列 */}
                     <div className="bg-white rounded-2xl shadow-md p-4 px-6 flex justify-between items-center border-l-8 border-indigo-500 flex-wrap gap-4">
                         <div className="flex items-center gap-3">
                             <span className="text-3xl hidden sm:block">🛡️</span>
@@ -1309,7 +1343,6 @@
                         </div>
                     </div>
 
-                    {/* 🔥 將原本的左右兩欄用 flex 容器包裝起來 */}
                     <div className="flex gap-6 flex-col lg:flex-row w-full">
                         <div className="w-full lg:w-1/3 space-y-6">
                             <div className="bg-white p-6 rounded-2xl shadow-xl border-t-8 border-purple-600">
@@ -1367,14 +1400,16 @@
                                 </div>
                                 <div className="flex flex-wrap gap-2 w-full xl:w-auto">
                                     <button onClick={() => { window.location.hash=''; sessionStorage.removeItem('receipt_channel'); setView('home'); }} className="flex-1 sm:flex-none bg-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-300">🏠 首頁</button>
-                                    <button onClick={handleCopyShareLink} className="flex-1 sm:flex-none bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-indigo-700 animate-pulse">🔗 複製專屬講師連結</button>
+                                    <button onClick={handleCopyShareLink} className="flex-1 sm:flex-none bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-indigo-700 animate-pulse">🔗 複製講師連結</button>
                                     <button onClick={handleDownloadTemplate} className="flex-1 sm:flex-none bg-cyan-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-cyan-700 transition-colors">📄 下載範本</button>
                                     <label className="flex-1 sm:flex-none bg-teal-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-teal-700 transition-colors cursor-pointer text-center flex items-center justify-center">
                                         📥 匯入Excel
                                         <input type="file" accept=".xlsx, .xls, .csv" className="hidden" onChange={handleImportExcel} />
                                     </label>
                                     <button onClick={() => setIsAddModalOpen(true)} className="flex-1 sm:flex-none bg-green-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-green-700">+ 新增</button>
-                                    <button onClick={handleBatchDownload} className="flex-1 sm:flex-none bg-orange-500 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-orange-600">📥 匯出清單/圖片</button>
+                                    <button onClick={handleBatchDownload} disabled={isProcessingZip} className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-sm font-bold shadow transition-colors flex items-center justify-center gap-1 ${isProcessingZip ? 'bg-gray-400 text-gray-100 cursor-not-allowed' : 'bg-orange-500 text-white hover:bg-orange-600'}`}>
+                                        {isProcessingZip ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : '📥 匯出清單'}
+                                    </button>
                                     <button onClick={() => setIsClearModalOpen(true)} className="flex-1 sm:flex-none bg-red-600 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-red-700">🗑️ 清空</button>
                                     <button onClick={handleLogoutAdmin} className="flex-1 sm:flex-none bg-gray-800 text-white px-4 py-2 rounded-xl text-sm font-bold shadow hover:bg-gray-900">🚪 登出</button>
                                 </div>
@@ -1383,23 +1418,27 @@
                             <div className="relative mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
                                 <div className="relative w-full sm:flex-1">
                                     <span className="absolute left-3 top-3 text-gray-400">🔍</span>
-                                    <input type="text" placeholder="搜尋講師..." className="w-full p-3 pl-10 border rounded-2xl bg-gray-50 focus:bg-white outline-none focus:ring-2 focus:ring-blue-500" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                                    <input type="text" placeholder="搜尋講師..." className="w-full p-3 pl-10 border rounded-2xl bg-gray-50 focus:bg-white transition-all outline-none focus:ring-2 focus:ring-blue-500" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
                                 </div>
                                 <div className="flex items-center gap-3 w-full sm:w-auto">
                                     {selectedIds.size > 0 && <span className="text-sm font-bold text-blue-600 whitespace-nowrap">已勾選 {selectedIds.size} 筆</span>}
-                                    <button onClick={handleBatchPrint} className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold shadow hover:bg-blue-700 flex justify-center items-center gap-2">🖨️ 批次排版列印</button>
+                                    <button onClick={handleBatchPrint} className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold shadow hover:bg-blue-700 transition-colors flex justify-center items-center gap-2 whitespace-nowrap">
+                                        🖨️ 批次處理勾選
+                                    </button>
                                 </div>
                             </div>
 
-                            <div className="overflow-x-auto">
+                            <div className="overflow-x-auto rounded-xl border border-gray-100 shadow-sm">
                                 <table className="w-full text-sm text-left border-collapse">
-                                    <thead><tr className="bg-gray-100 text-gray-500 text-xs uppercase tracking-wider">
-                                        <th className="p-4 w-12 text-center"><input type="checkbox" className="w-5 h-5 accent-blue-600 cursor-pointer" checked={filteredInstructors.length > 0 && selectedIds.size === filteredInstructors.filter(i=>!i.decryptionFailed).length} onChange={handleSelectAll} /></th>
-                                        <th className="p-4">姓名</th>
-                                        <th className="p-4 text-center">存摺</th>
-                                        <th className="p-4 text-center">簽名</th>
-                                        <th className="p-4 text-right">操作</th>
-                                    </tr></thead>
+                                    <thead>
+                                        <tr className="bg-gray-100 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-200">
+                                            <th className="p-4 w-12 text-center"><input type="checkbox" className="w-5 h-5 accent-blue-600 cursor-pointer" checked={filteredInstructors.length > 0 && selectedIds.size === filteredInstructors.filter(i=>!i.decryptionFailed).length} onChange={handleSelectAll} /></th>
+                                            <th className="p-4">姓名與個資</th>
+                                            <th className="p-4 text-center">存摺封面</th>
+                                            <th className="p-4 text-center">電子簽名</th>
+                                            <th className="p-4 text-right">操作</th>
+                                        </tr>
+                                    </thead>
                                     <tbody className="divide-y divide-gray-100">
                                         {filteredInstructors.length === 0 ? (
                                             <tr><td colSpan="5" className="p-8 text-center text-gray-400 font-bold bg-gray-50">尚無資料。請點擊上方「複製專屬講師連結」傳送給講師填寫！</td></tr>
@@ -1407,7 +1446,9 @@
                                             <tr key={i.id} className={`hover:bg-blue-50/30 transition-colors group ${selectedIds.has(i.id) ? 'bg-blue-50' : ''}`}>
                                                 <td className="p-4 text-center"><input type="checkbox" className="w-5 h-5 accent-blue-600 cursor-pointer" checked={selectedIds.has(i.id)} onChange={() => handleSelectInstructor(i.id)} disabled={i.decryptionFailed}/></td>
                                                 <td className="p-4">
-                                                    <div className="font-bold text-gray-800 text-base cursor-pointer select-none" onClick={() => !i.decryptionFailed && handleSelectInstructor(i.id)}>{i.name}</div>
+                                                    <div className="font-bold text-blue-600 hover:text-blue-800 text-base cursor-pointer select-none hover:underline flex items-center gap-1" onClick={() => { if(!i.decryptionFailed) { setEditFormData(i); setIsEditModalOpen(true); } }} title="點擊編輯講師資料">
+                                                        {i.name} <span className="text-[10px] opacity-70">✏️ 編輯</span>
+                                                    </div>
                                                     {i.decryptionFailed ? <div className="text-[10px] text-red-500 font-bold">解密失敗</div> : <div className="text-[10px] text-gray-400">{maskIdNumber(i.idNumber)}</div>}
                                                 </td>
                                                 <td className="p-4 text-center">
@@ -1426,7 +1467,7 @@
                                 </table>
                             </div>
                         </div>
-                    </div> {/* 🔥 關閉左右排版的 flex 容器 */}
+                    </div>
 
                     {/* 預覽圖檔彈窗 */}
                     {previewImageUrl && (
@@ -1450,7 +1491,9 @@
                                             <input type="range" min="10" max="200" step="5" value={imageScalePercent} onChange={(e) => setImageScalePercent(parseInt(e.target.value) || 100)} className="w-16 accent-blue-500 hidden sm:block" />
                                             <input type="number" min="10" max="200" value={Math.round(imageScalePercent)} onChange={(e) => setImageScalePercent(parseInt(e.target.value) || 100)} className="w-12 px-1 text-center text-black rounded" /> %
                                         </label>
-                                        <button onClick={handleNativeImagePrint} className="bg-blue-600 px-4 py-2 rounded-lg font-bold hover:bg-blue-700 ml-2">🖨️ 列印</button>
+                                        <button onClick={handleNativeImagePrint} disabled={isProcessingPdf} className={`px-4 py-2 rounded-lg font-bold ml-2 shadow-md flex items-center justify-center gap-2 ${isProcessingPdf ? 'bg-gray-400 text-gray-200 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 text-white active:scale-95'}`}>
+                                            {isProcessingPdf ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : '🖨️ 列印'}
+                                        </button>
                                         <button onClick={() => setPreviewImageUrl(null)} className="text-gray-400 hover:text-red-500 font-bold text-2xl ml-2 px-2">✕</button>
                                     </div>
                                 </div>
@@ -1463,6 +1506,7 @@
                         </div>
                     )}
 
+                    {/* 建立講師 */}
                     {isAddModalOpen && (
                         <div className="fixed inset-0 z-[100] bg-black/60 flex justify-center items-center p-4">
                             <div className="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-2xl border max-h-[90vh] overflow-y-auto">
@@ -1475,6 +1519,39 @@
                                     <div className="flex gap-4 mt-6 pt-4 border-t">
                                         <button type="button" onClick={() => setIsAddModalOpen(false)} className="flex-1 py-4 border rounded-2xl font-bold text-gray-400">取消</button>
                                         <button type="submit" className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-bold">自動加密並儲存</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 編輯講師 */}
+                    {isEditModalOpen && editFormData && (
+                        <div className="fixed inset-0 z-[100] bg-black/60 flex justify-center items-center p-4">
+                            <div className="bg-white p-6 sm:p-8 rounded-3xl shadow-2xl w-full max-w-2xl border max-h-[90vh] overflow-y-auto animate-in zoom-in-95">
+                                <h3 className="text-2xl font-bold mb-6 text-teal-800 flex items-center gap-2">✏️ 編輯講師資料</h3>
+                                <form onSubmit={handleAdminEditSubmit} className="space-y-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div><label className="block text-xs font-bold text-gray-500 mb-1">講師姓名</label><input required type="text" className="w-full p-3 border rounded-xl bg-gray-50" value={editFormData.name || ''} onChange={e => setEditFormData({...editFormData, name: e.target.value})} /></div>
+                                        <div><label className="block text-xs font-bold text-gray-500 mb-1">身分證字號</label><input required type="text" className="w-full p-3 border rounded-xl bg-gray-50" value={editFormData.idNumber || ''} onChange={e => setEditFormData({...editFormData, idNumber: e.target.value})} /></div>
+                                        <div><label className="block text-xs font-bold text-gray-500 mb-1">聯絡電話</label><input type="text" className="w-full p-3 border rounded-xl bg-gray-50" value={editFormData.phone || ''} onChange={e => setEditFormData({...editFormData, phone: e.target.value})} /></div>
+                                        <div><label className="block text-xs font-bold text-gray-500 mb-1">戶籍地址</label><input type="text" className="w-full p-3 border rounded-xl bg-gray-50" value={editFormData.address || ''} onChange={e => setEditFormData({...editFormData, address: e.target.value})} /></div>
+                                    </div>
+                                    
+                                    <div className="p-4 border border-blue-100 rounded-xl bg-blue-50/50 mt-4">
+                                        <label className="block text-sm font-bold text-blue-900 mb-3">🏦 匯款帳號資訊</label>
+                                        <div className="flex gap-6 mb-4">
+                                            <label className="flex items-center space-x-2 cursor-pointer"><input type="radio" value="bank" checked={editFormData.bankType === 'bank'} onChange={e => setEditFormData({...editFormData, bankType: e.target.value})} className="accent-blue-600" /> <span className="font-bold text-sm">一般銀行</span></label>
+                                            <label className="flex items-center space-x-2 cursor-pointer"><input type="radio" value="post" checked={editFormData.bankType === 'post'} onChange={e => setEditFormData({...editFormData, bankType: e.target.value})} className="accent-blue-600" /> <span className="font-bold text-sm">中華郵政</span></label>
+                                            <label className="flex items-center space-x-2 cursor-pointer"><input type="radio" value="other" checked={editFormData.bankType === 'other'} onChange={e => setEditFormData({...editFormData, bankType: e.target.value})} className="accent-blue-600" /> <span className="font-bold text-sm">親自領取</span></label>
+                                        </div>
+                                        {editFormData.bankType === 'bank' && <div className="grid grid-cols-2 gap-3"><input type="text" placeholder="銀行名稱 (例: 台灣銀行)" className="p-3 border rounded-xl bg-white shadow-sm" value={editFormData.bankName || ''} onChange={e => setEditFormData({...editFormData, bankName: e.target.value})}/><input type="text" placeholder="分行名稱" className="p-3 border rounded-xl bg-white shadow-sm" value={editFormData.bankBranch || ''} onChange={e => setEditFormData({...editFormData, bankBranch: e.target.value})}/><input type="text" placeholder="完整銀行帳號" className="col-span-2 p-3 border rounded-xl bg-white shadow-sm" value={editFormData.bankAccount || ''} onChange={e => setEditFormData({...editFormData, bankAccount: e.target.value})}/></div>}
+                                        {editFormData.bankType === 'post' && <div className="grid grid-cols-2 gap-3"><input type="text" placeholder="郵局局號 (7碼)" className="p-3 border rounded-xl bg-white shadow-sm" value={editFormData.postOffice || ''} onChange={e => setEditFormData({...editFormData, postOffice: e.target.value})}/><input type="text" placeholder="郵局帳號 (7碼)" className="p-3 border rounded-xl bg-white shadow-sm" value={editFormData.postAccount || ''} onChange={e => setEditFormData({...editFormData, postAccount: e.target.value})}/></div>}
+                                    </div>
+
+                                    <div className="flex gap-4 mt-8 pt-4 border-t border-gray-100">
+                                        <button type="button" onClick={() => setIsEditModalOpen(false)} className="flex-1 py-4 border-2 border-gray-200 rounded-2xl font-bold text-gray-500 hover:bg-gray-50 transition-colors">取消</button>
+                                        <button type="submit" className="flex-1 py-4 bg-teal-600 hover:bg-teal-700 text-white rounded-2xl font-bold shadow-lg transition-colors">儲存修改並加密</button>
                                     </div>
                                 </form>
                             </div>
@@ -1508,14 +1585,19 @@
                     return null;
                 }
                 const tempContainer = document.createElement('div');
-                tempContainer.style.position = 'absolute'; tempContainer.style.top = '-9999px'; tempContainer.style.left = '0';
-                tempContainer.style.width = paperSize === 'a4' ? '210mm' : '176mm'; tempContainer.style.background = 'white';
+                tempContainer.style.position = 'absolute';
+                tempContainer.style.top = '-9999px';
+                tempContainer.style.left = '0';
+                tempContainer.style.width = paperSize === 'a4' ? '210mm' : '176mm';
+                tempContainer.style.background = 'white';
                 
                 const originalPages = document.querySelectorAll('.a4-page');
                 originalPages.forEach(page => {
                     const clone = page.cloneNode(true);
-                    clone.style.margin = '0'; clone.style.boxShadow = 'none';
-                    const cutLines = clone.querySelectorAll('.cut-line'); cutLines.forEach(el => el.remove());
+                    clone.style.margin = '0';
+                    clone.style.boxShadow = 'none';
+                    const cutLines = clone.querySelectorAll('.cut-line');
+                    cutLines.forEach(el => el.remove());
                     tempContainer.appendChild(clone);
                 });
                 document.body.appendChild(tempContainer);
@@ -1630,13 +1712,8 @@
             );
         }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
+        const root = createRoot(document.getElementById('root'));
         root.render(<App />);
-        }).catch((error) => {
-            const root = document.getElementById('root');
-            const message = error && (error.stack || error.message) ? (error.stack || error.message) : String(error);
-            root.innerHTML = `<div style="padding:32px;font-family:Arial;color:#991b1b;white-space:pre-wrap"><h2>Firebase 模組載入失敗</h2><p>${message}</p></div>`;
-        });
     </script>
 </body>
 </html>
